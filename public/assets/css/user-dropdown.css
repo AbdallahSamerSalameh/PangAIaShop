@@ -1,0 +1,66 @@
+/* Header dropdown styles */
+.user-dropdown, .guest-user {
+    position: relative;
+    display: inline-block;
+}
+
+.user-dropdown .user-icon, .guest-user .login-icon {
+    color: #051922;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.user-dropdown .dropdown-content, .guest-user .dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.user-dropdown:hover .dropdown-content, .guest-user:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-content a {
+    color: #333;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.dropdown-content a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-content a:hover {
+    background-color: #f9f9f9;
+    color: #F28123;
+}
+
+.dropdown-logout {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    color: #333;
+    cursor: pointer;
+}
+
+.dropdown-logout:hover {
+    background-color: #f9f9f9;
+    color: #F28123;
+}
+
+@media (max-width: 767px) {
+    .user-dropdown, .guest-user {
+        display: none;
+    }
+}

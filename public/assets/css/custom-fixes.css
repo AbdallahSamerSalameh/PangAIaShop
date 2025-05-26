@@ -1,0 +1,313 @@
+/* Fix for mobile menu display issues */
+.mean-container .mean-bar {
+    background: transparent !important;
+    z-index: 999;
+    position: absolute;
+    width: auto;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 !important;
+    min-height: auto !important;
+}
+
+.mean-container a.meanmenu-reveal {
+    color: #f28123;
+    padding: 10px 13px;
+    width: 22px !important;
+    height: 22px !important;
+    background-color: transparent;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 4px;
+}
+
+.mean-container a.meanmenu-reveal span {
+    background-color: #f28123 !important;
+    height: 2px !important;
+    margin-top: 4px !important;
+}
+
+.mean-container .mean-nav {
+    background: rgba(35, 35, 35, 0.95);
+    margin-top: 15px; /* Position just below the header */
+    max-height: 80vh; /* Limit height and enable scrolling */
+    overflow-y: auto;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    position: absolute;
+    right: 0;
+    width: 250px; /* Specific width for the menu */
+    z-index: 1000; /* Ensure menu appears above other content */
+}
+
+.mean-container .mean-nav ul li a {
+    color: #fff;
+    padding: 12px 5%;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mean-container .mean-nav ul li a:hover {
+    color: #f28123;
+}
+
+.mean-container .mean-nav ul li a.mean-expand {
+    height: 24px;
+}
+
+.mean-container .mean-nav ul li a.mean-expand:hover {
+    background: rgba(242, 129, 35, 0.3);
+}
+
+/* Fixed mobile menu visibility */
+@media only screen and (max-width: 991px) {
+    .main-menu {
+        display: none !important;
+    }
+    
+    .mobile-menu {
+        display: block;
+        margin-top: 0;
+        width: 100%;
+    }
+    
+    .site-logo {
+        padding: 10px 0;
+        z-index: 99;
+        display: inline-block;
+        position: relative;
+    }
+    
+    .mobile-hide.login-icon {
+        display: none !important;
+    }
+    
+    .main-menu-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+      /* Align menu button with logo */
+    .mean-container .mean-bar {
+        top: 50%;
+        transform: translateY(-50%);
+        right: 15px;
+        position: absolute;
+    }
+}
+
+/* Remove the remnants of the orange bar */
+.mean-container .mean-bar::before {
+    display: none !important;
+}
+
+/* Improve the appearance of the mobile menu toggle */
+.mean-container a.meanmenu-reveal {
+    box-shadow: none !important;
+    color: #f28123 !important;
+}
+
+/* Fix visibility of the menu items */
+.mean-container .mean-nav ul li a {
+    padding: 12px 5%;
+    color: #fff;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 90%;
+    display: block;
+    text-align: left;
+    text-decoration: none;
+}
+
+/* Fix for the X button when menu is expanded */
+.mean-container a.meanmenu-reveal.meanclose {
+    color: #f28123 !important;
+    font-size: 18px !important;
+}
+
+/* Ensure proper vertical alignment of site logo and menu button */
+.main-menu-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Make sure the mobile menu doesn't overlap the content */
+@media only screen and (max-width: 767px) {
+    .mean-container .mean-nav {
+        margin-top: 90%; /* Adjusted for smaller screens */
+        right: 0;
+    }
+    
+    .site-logo img {
+        max-height: 40px;
+    }
+    
+    .mean-container .mean-bar {
+        right: 10px;
+    }
+}
+
+/* Fix for Apply Filter button */
+.filter-btn {
+    background-color: #f28123;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+    margin-top: 10px;
+    box-shadow: 0 2px 5px rgba(242, 129, 35, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-btn i {
+    margin-right: 8px;
+}
+
+.filter-btn:hover {
+    background-color: #e67211;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(242, 129, 35, 0.4);
+}
+
+/* Pagination Styles */
+.pagination-wrap {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.custom-pagination {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 50px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.page-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 5px;
+    background-color: white;
+    color: #666;
+    border-radius: 50%;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    cursor: pointer;
+}
+
+.page-btn:hover {
+    background-color: #f5f5f5;
+    color: #f28123;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.page-btn.active {
+    background-color: #f28123;
+    color: white;
+}
+
+.page-btn.disabled {
+    background-color: #f5f5f5;
+    color: #aaa;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.page-btn.disabled:hover {
+    transform: none;
+}
+
+/* Make pagination responsive */
+@media only screen and (max-width: 768px) {
+    .pagination-wrap {
+        margin-top: 20px;
+    }
+    
+    .custom-pagination {
+        padding: 6px 10px;
+    }
+    
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        margin: 0 3px;
+        font-size: 12px;
+    }
+    
+    /* Mobile responsive styles for filter button */
+    .filter-btn {
+        padding: 8px 15px;
+        font-size: 13px;
+        margin-top: 8px;
+    }
+}
+
+/* Login icon styles */
+.header-icons .login-icon {
+    color: #fff;
+    display: inline-block;
+    padding: 10px;
+    transition: 0.3s;
+    font-size: 15px;
+    margin-left: 10px;
+}
+
+.header-icons .login-icon:hover {
+    color: #F28123;
+}
+
+/* Ensure icons are vertically aligned */
+.header-icons a i {
+    vertical-align: middle;
+}
+
+/* Mobile login menu item styles */
+.mean-nav ul li.login-menu-item a {
+    border-top: 1px solid rgba(255,255,255,0.2) !important;
+    font-weight: 600 !important;
+    color: #F28123 !important;
+}
+
+.mean-nav ul li.login-menu-item a i {
+    margin-right: 8px;
+}
+
+/* Hover effect for login menu item */
+.mean-nav ul li.login-menu-item a:hover {
+    background: rgba(242, 129, 35, 0.1);
+}
+
+/* Fix for mobile menu position at different screen sizes */
+@media only screen and (min-width: 768px) and (max-width: 991px) {
+    .mean-container .mean-nav {
+        margin-top: 70px; /* Adjusted for medium screens */
+        width: 280px;
+        right: 0;
+    }
+}
+
+/* Fix menu positioning when screen height is small */
+@media only screen and (max-height: 600px) {
+    .mean-container .mean-nav {
+        max-height: 70vh;
+    }
+}
+
+/* Ensure menu doesn't get cut off at top or bottom */
+.mean-container .mean-nav {
+    top: auto; /* Reset any top positioning */
+    bottom: auto; /* Reset any bottom positioning */
+}

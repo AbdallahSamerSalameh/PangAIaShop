@@ -1,0 +1,51 @@
+/* 
+ * Country Dropdown Custom Styling
+ */
+.country-select {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 12px 15px;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8.825l-4.6-4.6L2.575 3.05 6 6.475 9.425 3.05l1.175 1.175z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px;
+    cursor: pointer;
+    height: auto !important;
+    min-height: 45px;
+    text-overflow: ellipsis;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding-right: 30px;
+}
+
+.country-select::-ms-expand {
+    display: none;
+}
+
+.country-select option {
+    padding: 8px 10px;
+    line-height: 1.4;
+    font-size: 1em;
+}
+
+/* Ensure dropdown options are fully visible */
+select.country-select[size] {
+    height: auto !important;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Fix Firefox specific issues */
+@-moz-document url-prefix() {
+    .country-select {
+        text-indent: 0.01px;
+        text-overflow: '';
+    }
+}
+
+/* Alert animations */
+.alert {
+    transition: opacity 0.5s ease-in-out;
+}

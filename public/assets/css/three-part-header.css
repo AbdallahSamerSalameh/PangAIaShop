@@ -1,0 +1,116 @@
+/* Custom stylesheet for the three-part header layout */
+
+/* Three-part header layout for desktop */
+@media only screen and (min-width: 992px) {
+    .main-menu-wrap {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        align-items: center;
+        width: 100%;
+    }
+
+    /* Left part - Logo */
+    .site-logo {
+        text-align: left;
+        grid-column: 1;
+    }
+
+    /* Middle part - Navigation */
+    nav.main-menu {
+        grid-column: 2;
+        text-align: center;
+    }
+    
+    /* Right part - Icons */
+    .header-icons-container {
+        grid-column: 3;
+        text-align: right;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .header-icons {
+        display: flex !important;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    /* Remove the list item from nav that contains icons */
+    nav.main-menu ul li:last-child {
+        display: none;
+    }
+}
+
+/* Ensure mobile menu still works correctly */
+@media only screen and (max-width: 991px) {
+    /* Hide the header icons container on mobile - they're in the burger menu */
+    .header-icons-container {
+        display: none;
+    }
+    
+    /* Restore original layout for mobile */
+    .main-menu-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        padding: 10px 0;
+    }
+
+    /* Center the logo in mobile */
+    .site-logo {
+        text-align: left;
+        position: relative;
+        z-index: 999;
+    }
+    
+    /* Ensure burger menu is positioned correctly */
+    .mean-container .mean-bar {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 15px;
+        background: transparent;
+        padding: 0;
+        z-index: 9998;
+        height: auto;
+        min-height: auto;
+    }
+    
+    /* Fix mobile menu icon alignment and visibility */
+    .mean-container a.meanmenu-reveal {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        top: 50%;
+        transform: translateY(-50%);        margin-top: 0;
+        padding: 10px;
+        z-index: 9999;
+        color: #f28123 !important;
+        font-size: 18px !important;
+        width: 22px;
+        height: 22px;
+        text-indent: 0;
+    }
+      /* Make the burger menu lines visible */
+    .mean-container a.meanmenu-reveal span {
+        display: block !important;
+        background: #f28123 !important;
+        height: 3px !important;
+        margin-top: 4px !important;
+        width: 100% !important;
+    }
+    
+    /* Position mobile menu dropdown below header */
+    .mean-container .mean-nav {
+        position: absolute;
+        top: 100%;
+        width: 250px;
+        right: 0;
+        margin-top: 10px;
+        background: rgba(35, 35, 35, 0.95);
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+}

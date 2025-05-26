@@ -1,0 +1,674 @@
+/*
+ * Custom Admin Dashboard Styling
+ * Matches the public site color scheme for consistent branding
+ * Primary: #F28123 (Orange), Dark: #051922 (Navy)
+ */
+
+:root {
+    --primary: #F28123;
+    --primary-dark: #d16a0d;
+    --primary-light: #f4941a;
+    --dark: #051922;
+    --dark-secondary: #162133;
+    --dark-tertiary: #07212e;
+    --light: #f5f5f5;
+    --white: #ffffff;
+    --gray-100: #f8f9fc;
+    --gray-200: #eaecf4;
+    --gray-300: #dddfeb;
+    --gray-400: #d1d3e2;
+    --gray-500: #b7b9cc;
+    --gray-600: #858796;
+}
+
+/* Override SB Admin 2 primary color variables */
+.bg-gradient-primary {
+    background: linear-gradient(180deg, var(--primary) 10%, var(--primary-dark) 100%) !important;
+}
+
+.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.text-primary {
+    color: var(--primary) !important;
+}
+
+.border-left-primary {
+    border-left: 0.25rem solid var(--primary) !important;
+}
+
+/* Fixed Sidebar Layout with Independent Scrolling */
+#wrapper {
+    overflow-x: hidden;
+}
+
+/* Fixed sidebar positioning */
+.sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 224px !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    /* Custom scrollbar for sidebar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Webkit scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Adjust content wrapper to accommodate fixed sidebar */
+#content-wrapper {
+    margin-left: 224px !important;
+    width: calc(100% - 224px) !important;
+    min-height: 100vh !important;
+}
+
+/* Ensure main content can scroll independently */
+#content {
+    overflow-y: auto !important;
+    height: auto !important;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background: linear-gradient(180deg, var(--dark) 10%, var(--dark-secondary) 100%) !important;
+}
+
+.sidebar .nav-item .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.sidebar .nav-item .nav-link:hover {
+    color: var(--white) !important;
+    background-color: rgba(242, 129, 35, 0.1) !important;
+}
+
+.sidebar .nav-item.active .nav-link {
+    color: var(--white) !important;
+    background-color: var(--primary) !important;
+}
+
+.sidebar .sidebar-brand {
+    background-color: var(--dark-tertiary) !important;
+}
+
+.sidebar .sidebar-brand .sidebar-brand-text {
+    color: var(--primary) !important;
+    font-weight: 700;
+}
+
+.sidebar .sidebar-brand .sidebar-brand-icon {
+    color: var(--primary) !important;
+}
+
+.sidebar-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.sidebar .sidebar-heading {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+/* Sidebar Dropdown/Collapse Sections - Orange Background with White Text */
+.sidebar .nav-item .collapse .collapse-inner,
+.sidebar .nav-item .collapsing .collapse-inner {
+    background-color: var(--primary) !important;
+    border: none !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(242, 129, 35, 0.3) !important;
+}
+
+.sidebar .nav-item .collapse .collapse-inner .collapse-header,
+.sidebar .nav-item .collapsing .collapse-inner .collapse-header {
+    color: var(--white) !important;
+    background-color: var(--primary-dark) !important;
+    margin: 0 !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.collapse-header{
+    font-size: 0.6rem !important;
+}
+
+.sidebar .nav-item .collapse .collapse-inner .collapse-item,
+.sidebar .nav-item .collapsing .collapse-inner .collapse-item {
+    color: var(--white) !important;
+    background-color: transparent !important;
+    margin: 0.2rem 0.5rem !important;
+    padding: 0.6rem 1rem !important;
+    border-radius: 0.25rem !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+}
+
+.sidebar .nav-item .collapse .collapse-inner .collapse-item:hover,
+.sidebar .nav-item .collapsing .collapse-inner .collapse-item:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: var(--white) !important;
+    transform: translateX(5px) !important;
+}
+
+.sidebar .nav-item .collapse .collapse-inner .collapse-item:active,
+.sidebar .nav-item .collapsing .collapse-inner .collapse-item:active {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    color: var(--white) !important;
+}
+
+.sidebar .nav-item .collapse .collapse-inner .collapse-item.active,
+.sidebar .nav-item .collapsing .collapse-inner .collapse-item.active {
+    background-color: var(--white) !important;
+    color: var(--primary) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Enhanced styling for toggled sidebar collapse sections */
+.sidebar.toggled .nav-item .collapse .collapse-inner {
+    background-color: var(--primary) !important;
+    border: 2px solid var(--primary-dark) !important;
+}
+
+/* Button Overrides */
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: #fff !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Card Headers with Primary Background */
+.card-header.py-3 {
+    background-color: var(--primary) !important;
+    color: var(--white) !important;
+}
+
+.card-header.py-3 h6,
+.card-header.py-3 .h6 {
+    color: var(--white) !important;
+}
+
+/* Links */
+a {
+    color: var(--primary) !important;
+}
+
+a:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* Topbar */
+.topbar {
+    background-color: var(--white) !important;
+    border-bottom: 1px solid var(--gray-200) !important;
+}
+
+.topbar .nav-item .nav-link {
+    color: var(--gray-600) !important;
+}
+
+.topbar .nav-item .nav-link:hover {
+    color: var(--primary) !important;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    border: 1px solid var(--gray-300) !important;
+}
+
+.dropdown-item:hover {
+    background-color: var(--light) !important;
+    color: var(--primary) !important;
+}
+
+/* Progress Bars */
+.progress-bar {
+    background-color: var(--primary) !important;
+}
+
+/* Badges */
+.badge-primary {
+    background-color: var(--primary) !important;
+}
+
+.badge-success {
+    background-color: #1cc88a !important;
+}
+
+.badge-warning {
+    background-color: #f6c23e !important;
+}
+
+.badge-danger {
+    background-color: #e74a3b !important;
+}
+
+/* Custom Badge Colors for Order Status */
+.badge-purple {
+    color: #fff;
+    background-color: #6f42c1;
+}
+
+.badge-purple:hover {
+    color: #fff;
+    background-color: #5a359a;
+}
+
+/* Enhanced status badge styling */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0.35rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Status-specific badge improvements */
+.badge-info {
+    background-color: #36b9cc;
+    border-color: #36b9cc;
+}
+
+.badge-warning {
+    background-color: #f6c23e;
+    border-color: #f6c23e;
+    color: #212529;
+}
+
+.badge-success {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+.badge-danger {
+    background-color: #e74a3b;
+    border-color: #e74a3b;
+}
+
+/* Tables */
+.table th {
+    background-color: var(--light) !important;
+    color: var(--dark) !important;
+    font-weight: 600;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(242, 129, 35, 0.05) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(242, 129, 35, 0.1) !important;
+}
+
+/* Form Controls */
+.form-control:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(242, 129, 35, 0.25) !important;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+/* DataTables */
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--primary) !important;
+    border: 1px solid var(--primary) !important;
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--primary-light) !important;
+    border: 1px solid var(--primary-light) !important;
+    color: white !important;
+}
+
+/* Charts - Chart.js overrides */
+.chart-area {
+    position: relative;
+}
+
+/* Custom Card Styling */
+.card-primary {
+    border-left: 4px solid var(--primary) !important;
+}
+
+.card-success {
+    border-left: 4px solid #1cc88a !important;
+}
+
+.card-warning {
+    border-left: 4px solid #f6c23e !important;
+}
+
+.card-danger {
+    border-left: 4px solid #e74a3b !important;
+}
+
+/* Info Cards */
+.text-xs {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+/* Custom Dashboard Cards */
+.card.border-left-primary {
+    border-left: 0.25rem solid var(--primary) !important;
+}
+
+.card.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.card.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.card.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+/* Login Page Customization */
+.bg-login-image {
+    background: linear-gradient(rgba(5, 25, 34, 0.7), rgba(5, 25, 34, 0.7)), url('../img/login-bg.jpg');
+    background-position: center;
+    background-size: cover;
+}
+
+.login .card {
+    border: none;
+    box-shadow: 0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+}
+
+/* Custom Utilities */
+.rotate-n-15 {
+    transform: rotate(-15deg);
+}
+
+.text-gray-300 {
+    color: var(--gray-300) !important;
+}
+
+.text-gray-400 {
+    color: var(--gray-400) !important;
+}
+
+.text-gray-500 {
+    color: var(--gray-500) !important;
+}
+
+.text-gray-600 {
+    color: var(--gray-600) !important;
+}
+
+.text-gray-800 {
+    color: var(--dark) !important;
+}
+
+.text-gray-900 {
+    color: var(--dark) !important;
+}
+
+/* Container and main content area styling */
+.container-fluid {
+    background-color: var(--gray-100) !important;
+}
+
+#content {
+    background-color: var(--gray-100) !important;
+}
+
+/* Dashboard specific card enhancements */
+.dashboard-card {
+    background-color: var(--white) !important;
+    border: 1px solid var(--gray-200) !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Metric cards styling */
+.card.border-left-primary,
+.card.border-left-success,
+.card.border-left-info,
+.card.border-left-warning {
+    background-color: var(--white) !important;
+}
+
+/* Ensure all content areas have proper backgrounds */
+.content-wrapper,
+#content-wrapper {
+    background-color: var(--gray-100) !important;
+}
+
+/* Force white backgrounds for all dashboard elements */
+.row .card,
+.col .card,
+.card.shadow {
+    background-color: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+/* Animation enhancements */
+.nav-link, .btn, .card {
+    transition: all 0.15s ease-in-out;
+}
+
+.card:hover, .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.10);
+}
+
+/* Enhanced card styling */
+.card-hover {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.card-hover:hover .fas {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+.metric-number {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: var(--dark) !important;
+}
+
+/* Icon circle styling */
+.icon-circle {
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Enhanced button styling */
+.btn {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Chart container enhancements */
+.chart-area, .chart-pie {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Progress bar enhancements */
+.progress {
+    height: 0.75rem;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 1s ease-in-out;
+}
+
+/* Enhanced table styling */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--gray-200);
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Custom alerts */
+.alert {
+    border: none;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.alert-primary {
+    background-color: rgba(242, 129, 35, 0.1);
+    border-left: 4px solid var(--primary);
+    color: var(--primary-dark);
+}
+
+.alert-success {
+    background-color: rgba(28, 200, 138, 0.1);
+    border-left: 4px solid #1cc88a;
+    color: #0e6b47;
+}
+
+.alert-warning {
+    background-color: rgba(246, 194, 62, 0.1);
+    border-left: 4px solid #f6c23e;
+    color: #b7791f;
+}
+
+.alert-danger {
+    background-color: rgba(231, 74, 59, 0.1);
+    border-left: 4px solid #e74a3b;
+    color: #a71e2a;
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Ensure topbar stays properly positioned */
+.topbar {
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+/* Scroll to top button positioning adjustment for fixed sidebar */
+.scroll-to-top {
+    right: 1rem !important;
+    bottom: 1rem !important;
+    z-index: 1001 !important;
+}
+
+/* Fix for modals with fixed sidebar */
+.modal {
+    z-index: 1050 !important;
+}
+
+.modal-backdrop {
+    z-index: 1040 !important;
+}

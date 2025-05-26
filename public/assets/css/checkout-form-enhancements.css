@@ -1,0 +1,96 @@
+/* 
+ * Enhanced styles for checkout form
+ */
+
+/* Make the submit button more prominent */
+.order-details-wrap .boxed-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.order-details-wrap .boxed-btn:hover {
+    background-color: #051922;
+    color: #F28123;
+}
+
+/* Style for back to cart button */
+.order-details-wrap .boxed-btn-outline {
+    width: 100%;
+    display: inline-block;
+    background-color: transparent;
+    color: #F28123;
+    border: 2px solid #F28123;
+    text-align: center;
+    padding: 15px;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.order-details-wrap .boxed-btn-outline:hover {
+    background-color: #F28123;
+    color: #fff;
+}
+
+/* Two button layout */
+.checkout-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Add pulse animation for button on hover */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.03);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.order-details-wrap .boxed-btn:hover {
+    animation: pulse 1.5s infinite;
+}
+
+/* Improve form validation styles */
+.is-invalid {
+    border-color: #dc3545 !important;
+    border-width: 2px !important;
+}
+
+/* Make country dropdowns more consistent with other form fields */
+.country-select {
+    width: 100%;
+}
+
+/* Ensure all form inputs are the same height */
+input[type="text"], 
+input[type="email"], 
+input[type="tel"], 
+select,
+textarea {
+    height: 45px;
+    width: 100%;
+}
+
+textarea {
+    height: auto;
+}
+
+/* Style the required field indicators */
+input[placeholder*="*"], 
+select[required] {
+    background-color: rgba(242, 129, 35, 0.03);
+}
