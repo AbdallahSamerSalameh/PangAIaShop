@@ -43,15 +43,19 @@
                                             <p>Your order has been confirmed and is being processed</p>
                                         </div>
                                     </div>
-                                    
-                                    <div class="timeline-item {{ $order->status == 'shipped' || $order->status == 'delivered' ? 'active' : '' }}">
+                                      <div class="timeline-item {{ $order->status == 'shipped' || $order->status == 'delivered' ? 'active' : '' }}">
                                         <div class="timeline-icon">
                                             <i class="fa fa-truck"></i>
                                         </div>
                                         <div class="timeline-content">
                                             <h4>Order Shipped</h4>
-                                            <p>{{ $shipment->shipped_at ? $shipment->shipped_at->format('F d, Y - h:i A') : 'Pending' }}</p>
-                                            <p>Your order has been shipped and is on its way</p>
+                                            @if($order->status == 'shipped' || $order->status == 'delivered')
+                                                <p>{{ $shipment->shipped_at ? $shipment->shipped_at->format('F d, Y - h:i A') : $order->order_date->addDays(2)->format('F d, Y - h:i A') }}</p>
+                                                <p>Your order has been shipped and is on its way</p>
+                                            @else
+                                                <p>{{ $order->order_date->addDays(2)->format('F d, Y - h:i A') }}</p>
+                                                <p>Estimated shipping date - Your order will be shipped after processing</p>
+                                            @endif
                                         </div>
                                     </div>
                                     

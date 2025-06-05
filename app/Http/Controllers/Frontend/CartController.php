@@ -93,12 +93,11 @@ class CartController extends Controller
         
         $productId = $request->product_id;
         $quantity = $request->quantity;
-        
-        // Get the product
+          // Get the product
         $product = Product::findOrFail($productId);
-          // Check if product is in stock by checking inventory
-        $productInventory = $product->inventory->first();
-        $stockQuantity = $productInventory ? $productInventory->quantity : 0;
+            // Check if product is in stock by checking available inventory (total - reserved)
+        $productInventory = $product->inventory;
+        $stockQuantity = $productInventory ? $productInventory->available_quantity : 0;
         
         if ($stockQuantity < $quantity) {
             $message = 'Sorry, only ' . $stockQuantity . ' items available in stock.';
@@ -118,13 +117,12 @@ class CartController extends Controller
         
         // Check if product already exists in cart
         $cartItem = $cart->items()->where('product_id', $productId)->first();
-        
-        if ($cartItem) {
+          if ($cartItem) {
             // Update quantity
             $newQuantity = $cartItem->quantity + $quantity;
-              // Check if new quantity exceeds stock
-            $productInventory = $product->inventory->first();
-            $stockQuantity = $productInventory ? $productInventory->quantity : 0;
+                // Check if new quantity exceeds stock using hasOne relationship
+            $productInventory = $product->inventory;
+            $stockQuantity = $productInventory ? $productInventory->available_quantity : 0;
             
             if ($newQuantity > $stockQuantity) {
                 $message = 'Sorry, only ' . $stockQuantity . ' items available in stock.';
@@ -193,12 +191,11 @@ class CartController extends Controller
         
         // Get cart item
         $cartItem = $cart->items()->where('id', $cartItemId)->firstOrFail();
-        
-        // Get product
+          // Get product
         $product = $cartItem->product;
-          // Check if quantity exceeds stock
-        $productInventory = $product->inventory->first();
-        $stockQuantity = $productInventory ? $productInventory->quantity : 0;
+            // Check if quantity exceeds stock using hasOne relationship
+        $productInventory = $product->inventory;
+        $stockQuantity = $productInventory ? $productInventory->available_quantity : 0;
         
         if ($quantity > $stockQuantity) {
             $message = 'Sorry, only ' . $stockQuantity . ' items available in stock.';
@@ -299,8 +296,7 @@ class CartController extends Controller
         
         return redirect()->route('cart')->with('success', 'Item removed from cart!');
     }
-    
-    /**
+      /**
      * Apply a coupon code to the cart.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -309,159 +305,164 @@ class CartController extends Controller
     public function applyCoupon(Request $request)
     {
         $request->validate([
-            'coupon_code' => 'required|string|max:50'
+            'code' => 'required|string|max:50'
         ]);
         
-        $couponCode = $request->coupon_code;
+        $couponCode = $request->code;
         
-        // Get cart
-        $cart = $this->getOrCreateCart();
-          // Check if coupon exists and is valid
-        $promoCode = PromoCode::where('code', $couponCode)
-            ->where('is_active', true)
-            ->where(function($query) {
-                $query->whereNull('valid_from')
-                      ->orWhere('valid_from', '<=', now());
-            })
-            ->where(function($query) {
-                $query->whereNull('valid_until')
-                      ->orWhere('valid_until', '>=', now());
-            })
-            ->first();
+        try {
+            DB::beginTransaction();
             
-        if (!$promoCode) {
-            $message = 'Invalid or expired coupon code.';
+            // Get cart
+            $cart = $this->getOrCreateCart();
             
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $message
-                ]);
-            }
-            
-            return redirect()->back()->with('error', $message)->withInput();
-        }
-          // Check global usage limits
-        if ($promoCode->usage_limit && $promoCode->usage_count >= $promoCode->usage_limit) {
-            $message = 'This coupon has reached its usage limit.';
-            
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $message
-                ]);
-            }
-            
-            return redirect()->back()->with('error', $message)->withInput();
-        }
-        
-        // Check per-user usage limits (maximum 3 times per user)
-        if (Auth::check()) {
-            $userUsageCount = $promoCode->getUserUsageCount(Auth::id());
-            if ($userUsageCount >= 3) {
-                $message = 'You have already used this promo code the maximum number of times.';
+            // Check if coupon exists and is valid
+            $promoCode = PromoCode::where('code', $couponCode)
+                ->where('is_active', true)
+                ->where(function($query) {
+                    $query->whereNull('valid_from')
+                          ->orWhere('valid_from', '<=', now());
+                })
+                ->where(function($query) {
+                    $query->whereNull('valid_until')
+                          ->orWhere('valid_until', '>=', now());
+                })
+                ->first();
                 
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $message
-                    ]);
+            if (!$promoCode) {
+                throw new \Exception('Invalid or expired coupon code.');
+            }
+            
+            // Check global usage limits
+            if ($promoCode->max_uses && $promoCode->usages()->count() >= $promoCode->max_uses) {
+                throw new \Exception('This coupon has reached its usage limit.');
+            }
+            
+            // Check per-user usage limits (maximum 3 times per user)
+            if (Auth::check()) {
+                $userUsageCount = $promoCode->getUserUsageCount(Auth::id());
+                if ($userUsageCount >= 3) {
+                    throw new \Exception('You have already used this promo code the maximum number of times.');
                 }
-                
-                return redirect()->back()->with('error', $message)->withInput();
             }
-        }// Calculate cart subtotal
-        $cartItems = $cart->items()->with('product')->get();
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * ($item->unit_price ?? $item->product->price);
-        });
-        
-        // Check minimum order amount
-        if ($promoCode->minimum_order_amount && $subtotal < $promoCode->minimum_order_amount) {
-            $message = 'Your order must be at least $' . number_format($promoCode->minimum_order_amount, 2) . ' to use this coupon.';
             
-            if ($request->ajax()) {
+            // Calculate cart subtotal
+            $cartItems = $cart->items()->with(['product', 'variant'])->get();
+            $subtotal = $cartItems->sum(function($item) {
+                return $item->quantity * ($item->unit_price ?? $item->product->price);
+            });
+            
+            // Check minimum order amount
+            if ($promoCode->min_order_amount && $subtotal < $promoCode->min_order_amount) {
+                throw new \Exception('Your order must be at least $' . number_format($promoCode->min_order_amount, 2) . ' to use this coupon.');
+            }
+            
+            // Calculate discount amount
+            $discount = $promoCode->calculateDiscount($subtotal);
+            
+            // Apply discount to cart
+            $cart->discount = $discount;
+            $cart->promo_code = $promoCode->code;
+            $cart->promo_code_id = $promoCode->id;
+            $cart->save();
+            
+            // Calculate total
+            $total = $subtotal - $discount;
+            
+            DB::commit();
+            
+            // Success message
+            $message = 'Coupon applied successfully!';
+            
+            // Return appropriate response based on request type
+            if ($request->expectsJson()) {
                 return response()->json([
-                    'success' => false,
-                    'message' => $message
+                    'success' => true,
+                    'message' => $message,
+                    'cart_subtotal' => $subtotal,
+                    'cart_discount' => $discount,
+                    'cart_total' => $total,
+                    'formatted_cart_subtotal' => '$' . number_format($subtotal, 2),
+                    'formatted_cart_discount' => '$' . number_format($discount, 2),
+                    'formatted_cart_total' => '$' . number_format($total, 2),
+                    'coupon_code' => $promoCode->code,
+                    'cart' => $cart->fresh()->load('items.product')
                 ]);
             }
             
-            return redirect()->back()->with('error', $message)->withInput();
+            return redirect()->back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 422);
+            }
+            
+            return redirect()->back()->with('error', $e->getMessage());
         }
-          // Calculate discount amount with $100 maximum cap
-        $discount = $promoCode->calculateDiscount($subtotal);
-        
-        // Apply discount to cart
-        $cart->discount = $discount;
-        $cart->promo_code = $promoCode->code;
-        $cart->promo_code_id = $promoCode->id;
-        $cart->save();
-        
-        // Increment usage count for the promo code
-        $promoCode->increment('usage_count');
-        
-        // Calculate total
-        $total = $subtotal - $discount;
-        
-        // Success message
-        $message = 'Coupon applied successfully!';
-        
-        // Return appropriate response based on request type
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'cart_subtotal' => $subtotal,
-                'cart_discount' => $discount,
-                'cart_total' => $total,
-                'formatted_cart_subtotal' => '$' . number_format($subtotal, 2),
-                'formatted_cart_discount' => '$' . number_format($discount, 2),
-                'formatted_cart_total' => '$' . number_format($total, 2),
-                'coupon_code' => $promoCode->code
-            ]);
-        }
-        
-        return redirect()->route('cart')->with('success', $message);
     }
-    
-    /**
+      /**
      * Remove applied coupon from the cart.
      *
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function removeCoupon(Request $request)
     {
-        // Get cart
-        $cart = $this->getOrCreateCart();
-        
-        // Remove coupon
-        $cart->discount = 0;
-        $cart->promo_code = null;
-        $cart->promo_code_id = null;
-        $cart->save();        // Calculate cart totals
-        $cartItems = $cart->items()->with('product')->get();
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * ($item->unit_price ?? $item->product->price);
-        });
-        
-        $total = $subtotal;
-        
-        // Return appropriate response based on request type
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Coupon removed successfully!',
-                'cart_subtotal' => $subtotal,
-                'cart_discount' => 0,
-                'cart_total' => $total,
-                'formatted_cart_subtotal' => '$' . number_format($subtotal, 2),
-                'formatted_cart_discount' => '$0.00',
-                'formatted_cart_total' => '$' . number_format($total, 2)
-            ]);
+        try {
+            DB::beginTransaction();
+            
+            // Get cart
+            $cart = $this->getOrCreateCart();
+            
+            // Remove coupon
+            $cart->discount = 0;
+            $cart->promo_code = null;
+            $cart->promo_code_id = null;
+            $cart->save();
+            
+            // Calculate cart totals
+            $cartItems = $cart->items()->with(['product', 'variant'])->get();
+            $subtotal = $cartItems->sum(function($item) {
+                return $item->quantity * ($item->unit_price ?? $item->product->price);
+            });
+            
+            $total = $subtotal;
+            
+            DB::commit();
+            
+            // Return appropriate response based on request type
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Coupon removed successfully!',
+                    'cart_subtotal' => $subtotal,
+                    'cart_discount' => 0,
+                    'cart_total' => $total,
+                    'formatted_cart_subtotal' => '$' . number_format($subtotal, 2),
+                    'formatted_cart_discount' => '$0.00',
+                    'formatted_cart_total' => '$' . number_format($total, 2),
+                    'cart' => $cart->fresh()->load('items.product')
+                ]);
+            }
+            
+            return redirect()->back()->with('success', 'Coupon removed successfully!');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 422);
+            }
+            
+            return redirect()->back()->with('error', 'Error removing coupon. Please try again.');
         }
-        
-        return redirect()->route('cart')->with('success', 'Coupon removed successfully!');
     }
     
     /**
@@ -637,14 +638,12 @@ class CartController extends Controller
               // Set variant_id to null if not provided
             $variantId = $request->has('variant_id') ? $validated['variant_id'] : null;
             
-            if ($variantId) {
-                $variant = ProductVariant::find($variantId);
+            if ($variantId) {            $variant = ProductVariant::find($variantId);
                 $inventoryItem = $variant ? $variant->inventory : null;
             } else {
-                $inventoryItem = $product->inventory->first();
+                $inventoryItem = $product->inventory;
             }
-            
-            if (!$inventoryItem || $inventoryItem->quantity < $validated['quantity']) {
+              if (!$inventoryItem || $inventoryItem->available_quantity < $validated['quantity']) {
                 throw new \Exception('Product is out of stock or insufficient quantity available.');
             }
               // Check if the item already exists in cart
@@ -654,8 +653,7 @@ class CartController extends Controller
                 ->first();
                   if ($cartItem) {
                 // Update quantity if item exists
-                $newQuantity = $cartItem->quantity + $validated['quantity'];
-                if ($inventoryItem->quantity < $newQuantity) {
+                $newQuantity = $cartItem->quantity + $validated['quantity'];                if ($inventoryItem->available_quantity < $newQuantity) {
                     throw new \Exception('Cannot add more of this item. Insufficient stock.');
                 }
                 
@@ -678,22 +676,23 @@ class CartController extends Controller
             $cart->updateExpiry();
             
             DB::commit();
-            
-            if ($request->expectsJson()) {
+              if ($request->expectsJson()) {
                 return response()->json([
+                    'success' => true,
                     'message' => 'Product added to cart successfully',
+                    'cart_count' => $cart->items()->sum('quantity'),
                     'cart' => $cart->load('items.product')
                 ]);
             }
             
             return redirect()->back()->with('success', 'Product added to cart successfully');
-            
-        } catch (\Exception $e) {
+              } catch (\Exception $e) {
             DB::rollBack();
             
             if ($request->expectsJson()) {
                 return response()->json([
-                    'error' => $e->getMessage()
+                    'success' => false,
+                    'message' => $e->getMessage()
                 ], 422);
             }
             
@@ -732,13 +731,12 @@ class CartController extends Controller
                 
                 return redirect()->back()->with('success', 'Item removed from cart');
             }
-              // Check stock availability
+            // Check stock availability
             $product = $cartItem->product;
             $inventoryItem = $cartItem->variant_id ? 
                 $cartItem->variant->inventory : 
-                $product->inventory->first();
-                
-            if (!$inventoryItem || $inventoryItem->quantity < $validated['quantity']) {
+                $product->inventory;
+                  if (!$inventoryItem || $inventoryItem->available_quantity < $validated['quantity']) {
                 throw new \Exception('Requested quantity is not available in stock.');
             }
             
@@ -771,115 +769,7 @@ class CartController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
-      /**
-     * Apply a promo code to the cart
-     */
-    public function applyPromoCode(Request $request)
-    {
-        $validated = $request->validate([
-            'code' => 'required|string'
-        ]);
-        
-        $cart = $this->getOrCreateCart();
-        $code = $validated['code'];
-        
-        // Find the promo code directly in the controller
-        $promoCode = PromoCode::where('code', $code)
-            ->where('is_active', true)
-            ->where(function($query) {
-                $query->whereNull('valid_from')
-                    ->orWhere('valid_from', '<=', now());
-            })
-            ->where(function($query) {
-                $query->whereNull('valid_until')
-                    ->orWhere('valid_until', '>=', now());
-            })
-            ->first();
-            
-        if (!$promoCode) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'error' => 'Invalid or expired promo code'
-                ], 422);
-            }
-            return redirect()->back()->with('error', 'Invalid or expired promo code');
-        }
-            
-        // Check per-user limit
-        if (Auth::check()) {
-            $userId = Auth::id();
-            $userUsageCount = $promoCode->getUserUsageCount($userId);
-            if ($userUsageCount >= 3) {
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'error' => 'You have already used this promo code the maximum number of times'
-                    ], 422);
-                }
-                return redirect()->back()->with('error', 'You have already used this promo code the maximum number of times');
-            }
-        }
-        
-        // Calculate cart subtotal
-        $cartItems = $cart->items()->with(['product', 'variant'])->get();
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * $item->getPrice();
-        });
-        
-        // Calculate discount with $100 cap
-        $discount = 0;
-        $maxDiscountCap = 100.00; // Hard cap at $100
-        
-        if ($promoCode->discount_type === 'percentage') {
-            $discount = $subtotal * ($promoCode->discount_value / 100);
-            // Cap at $100
-            if ($discount > $maxDiscountCap) {
-                $discount = $maxDiscountCap;
-            }
-        } else {
-            $discount = $promoCode->discount_value;
-            // Cap at $100
-            if ($discount > $maxDiscountCap) {
-                $discount = $maxDiscountCap;
-            }
-            // Discount should not exceed subtotal
-            if ($discount > $subtotal) {
-                $discount = $subtotal;
-            }
-        }
-        
-        // Apply discount to cart
-        $cart->promo_code = $promoCode->code;
-        $cart->promo_code_id = $promoCode->id;
-        $cart->discount = $discount;
-        $cart->save();
-        
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Promo code applied successfully',
-                'cart' => $cart->fresh()->load('items.product')
-            ]);
-        }
-        
-        return redirect()->back()->with('success', 'Promo code applied successfully');
-    }
-    
-    /**
-     * Remove a promo code from the cart
-     */
-    public function removePromoCode(Request $request)
-    {
-        $cart = $this->getOrCreateCart();
-        $cart->removePromoCode();
-        
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Promo code removed successfully',
-                'cart' => $cart->fresh()->load('items.product')
-            ]);
-        }
-        
-        return redirect()->back()->with('success', 'Promo code removed successfully');
-    }
+  
     
     /**
      * Clear all items from the cart
@@ -940,14 +830,13 @@ class CartController extends Controller
             // Check if cart is empty
             if ($cartItems->isEmpty()) {
                 throw new \Exception('Your cart is empty');
-            }
-              // Verify stock availability for all items
+            }            // Verify stock availability for all items
             foreach ($cartItems as $item) {
                 $inventoryItem = $item->variant_id ? 
                     $item->variant->inventory : 
-                    $item->product->inventory->first();
+                    $item->product->inventory;
                     
-                if (!$inventoryItem || $inventoryItem->quantity < $item->quantity) {
+                if (!$inventoryItem || $inventoryItem->available_quantity < $item->quantity) {
                     throw new \Exception("Insufficient stock for {$item->product->name}");
                 }
             }
@@ -1009,10 +898,9 @@ class CartController extends Controller
                     if ($inventoryItem) {
                         $inventoryItem->quantity -= $item->quantity;
                         $inventoryItem->save();
-                    }
-                } else {
-                    // For regular products, get the first inventory record
-                    $inventoryItem = $item->product->inventory()->first();
+                    }                } else {
+                    // For regular products, get the inventory record using hasOne relationship
+                    $inventoryItem = $item->product->inventory;
                     if ($inventoryItem) {
                         $inventoryItem->quantity -= $item->quantity;
                         $inventoryItem->save();

@@ -18,12 +18,12 @@ class Admin extends Authenticatable
         'password_hash',
         'role',
         'avatar_url',
+        'profile_image',
         'phone_number',
         'two_factor_secret',
         'last_password_change',
         'failed_login_count',
         'last_login',
-        'created_by',
         'is_active',
         'two_factor_verified',
         'two_factor_method',
@@ -126,17 +126,9 @@ class Admin extends Authenticatable
         return $this->hasMany(Payment::class, 'processed_by');
     }
 
-    // Created admins (for Super Admins)
-    public function createdAdmins()
-    {
-        return $this->hasMany(Admin::class, 'created_by');
-    }
-
-    // Creator admin
-    public function creator()
-    {
-        return $this->belongsTo(Admin::class, 'created_by');
-    }
+    // Note: Admin creation relationships are not implemented yet
+    // as the admins table doesn't have a created_by column
+    // If needed in future, add created_by column to admins table via migration
 
     // Shipments created by this admin
     public function createdShipments()
@@ -176,11 +168,11 @@ class Admin extends Authenticatable
     public function getCascadeDeletes(): array
     {
         return [
-            'createdAdmins',
             'managedVendors',
             'categories',
             'createdProducts',
-            'promoCodes'
+            'promoCodes',
+            'createdShipments'
         ];
     }
 

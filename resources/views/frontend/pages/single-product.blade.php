@@ -1,6 +1,6 @@
 @extends('frontend.layouts.master')
 
-@section('title', 'MegaStore - ' . $product->name)
+@section('title', 'PangAIaShop - ' . $product->name)
 
 @section('content')
 <!-- breadcrumb-section -->
@@ -24,22 +24,57 @@
         <div class="row">
             <div class="col-lg-6">
                 <div class="single-product-images">
+                    <!-- Main product image -->
+                    <div class="main-product-image mb-4">
+                        <div class="main-image-container">
+                            @if(isset($product->images) && $product->images->count() > 0)
+                                @php
+                                    $primaryImage = $product->images->where('is_primary', true)->first() 
+                                                 ?? $product->images->first();
+                                @endphp
+                                <img id="main-product-img" 
+                                     src="{{ asset($primaryImage->image_url) }}" 
+                                     alt="{{ $product->name }}" 
+                                     class="img-fluid main-product-image"
+                                     onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
+                            @else
+                                <img id="main-product-img" 
+                                     src="{{ asset($product->featured_image) }}" 
+                                     alt="{{ $product->name }}" 
+                                     class="img-fluid main-product-image"
+                                     onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
+                            @endif
+                            
+                            @if(!$product->in_stock)
+                                <div class="out-of-stock-overlay">
+                                    <span class="out-of-stock-text">Out of Stock</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    
                     <!-- Product gallery thumbnails -->
                     <div class="product-gallery">
-                        <div class="row">
+                        <div class="thumbnail-carousel">
                             @if(isset($product->images) && $product->images->count() > 0)
-                                @foreach($product->images as $image)
-                                <div class="col-4 col-md-3 mb-3">
+                                @foreach($product->images as $index => $image)
+                                <div class="thumbnail-item">
                                     <div class="product-image-thumb{{ $image->is_primary ? ' active' : '' }}">
-                                        <img src="{{ asset($image->image_url) }}" alt="Product Image" class="img-fluid thumbnail-img" onclick="changeMainImage(this)" 
+                                        <img src="{{ asset($image->image_url) }}" 
+                                             alt="Product Image {{ $index + 1 }}" 
+                                             class="img-fluid thumbnail-img" 
+                                             onclick="changeMainImage(this)" 
                                              onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
                                     </div>
                                 </div>
                                 @endforeach
                             @else
-                                <div class="col-4 col-md-3 mb-3">
+                                <div class="thumbnail-item">
                                     <div class="product-image-thumb active">
-                                        <img src="{{ asset($product->featured_image) }}" alt="Product Image" class="img-fluid thumbnail-img" onclick="changeMainImage(this)"
+                                        <img src="{{ asset($product->featured_image) }}" 
+                                             alt="Product Image" 
+                                             class="img-fluid thumbnail-img" 
+                                             onclick="changeMainImage(this)"
                                              onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
                                     </div>
                                 </div>
@@ -128,9 +163,9 @@
                             <div class="quantity-section mb-3">
                                 <label for="quantity">Quantity:</label>
                                 <div class="quantity-input">
-                                    <button type="button" class="quantity-btn minus" onclick="decrementQuantity()">-</button>
+                                    {{-- <button type="button" class="quantity-btn minus" onclick="decrementQuantity()">-</button> --}}
                                     <input type="number" class="m-0" id="quantity" name="quantity" min="1" max="{{ $product->stock_qty }}" value="1" {{ !$product->in_stock ? 'disabled' : '' }}>
-                                    <button type="button" class="quantity-btn plus" onclick="incrementQuantity()">+</button>
+                                    {{-- <button type="button" class="quantity-btn plus" onclick="incrementQuantity()">+</button> --}}
                                 </div>
                             </div>                            <div class="action-buttons">
                                 <button type="submit" class="cart-btn {{ !$product->in_stock ? 'disabled' : '' }}" {{ !$product->in_stock ? 'disabled' : '' }}>
@@ -254,13 +289,14 @@
                                             </div>
                                         </div>
                                         <div class="col-md-8">
-                                            <div class="rating-breakdown">                                                @for($i = 5; $i >= 1; $i--)
+                                            <div class="rating-breakdown">
+                                                @for($i = 5; $i >= 1; $i--)
                                                     <div class="rating-row">
                                                         <span class="rating-stars">{{ $i }} <i class="fas fa-star"></i></span>
                                                         <div class="progress">
-                                                            <div class="progress-bar" role="progressbar" style="width: {{ $ratingPercentages[$i] }}%" aria-valuenow="{{ $ratingPercentages[$i] }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            <div class="progress-bar" role="progressbar" style="width: {{ $ratingPercentages[$i] ?? 0 }}%" aria-valuenow="{{ $ratingPercentages[$i] ?? 0 }}" aria-valuemin="0" aria-valuemax="100"></div>
                                                         </div>
-                                                        <span class="rating-count">{{ $ratingDistribution[$i] }}</span>
+                                                        <span class="rating-count">{{ $ratingDistribution[$i] ?? 0 }}</span>
                                                     </div>
                                                 @endfor
                                             </div>
@@ -268,68 +304,120 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Individual reviews -->
-                                <div class="customer-reviews">
-                                    <h4>Customer Reviews</h4>
-                                    
-                                    @if(isset($product->reviews) && $product->reviews->count() > 0)
-                                        @foreach($product->reviews as $review)
-                                        <div class="review-item">
-                                            <div class="reviewer-info">
-                                                <h5 class="reviewer-name">{{ $review->user->name }}</h5>
-                                                <div class="review-date">{{ $review->created_at->format('M d, Y') }}</div>
-                                                <div class="reviewer-rating">
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        @if($i <= $review->rating)
-                                                            <i class="fas fa-star"></i>
-                                                        @else
-                                                            <i class="far fa-star"></i>
-                                                        @endif
-                                                    @endfor
-                                                </div>
-                                            </div>                                            <div class="review-content">
-                                                <p>{{ $review->comment ?? 'No comment provided.' }}</p>
-                                            </div>
-                                        </div>
-                                        <hr>
-                                        @endforeach
-                                    @else
-                                        <div class="no-reviews">
-                                            <p>There are no reviews yet. Be the first to review this product!</p>
-                                        </div>
-                                    @endif
-                                      <!-- Write a review section -->
-                                    @auth
-                                    <div class="write-review mt-4">
-                                        <h4>Write a Review</h4>
+                                <!-- Write a review section - MOVED TO TOP -->
+                                @auth
+                                <div class="write-review mb-5">
+                                    <div class="review-form-header">
+                                        <h4><i class="fas fa-edit"></i> Write Your Review</h4>
+                                        <p class="text-muted">Share your experience to help other customers make informed decisions</p>
+                                    </div>
+                                    <div class="review-form-container">
                                         <form action="{{ route('product.review', $product->id) }}" method="POST">
-                                            @csrf                                            <div class="form-group mb-4">
-                                                <label class="d-block mb-2">Your Rating:</label>                                                <div class="rating-input">
-                                                    <input type="radio" id="star5" name="rating" value="5">
-                                                    <label for="star5"><i class="far fa-star rating-star"></i></label>
-                                                    <input type="radio" id="star4" name="rating" value="4">
-                                                    <label for="star4"><i class="far fa-star rating-star"></i></label>
-                                                    <input type="radio" id="star3" name="rating" value="3">
-                                                    <label for="star3"><i class="far fa-star rating-star"></i></label>
-                                                    <input type="radio" id="star2" name="rating" value="2">
-                                                    <label for="star2"><i class="far fa-star rating-star"></i></label>
-                                                    <input type="radio" id="star1" name="rating" value="1" required>
-                                                    <label for="star1"><i class="far fa-star rating-star"></i></label>
+                                            @csrf
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-4">
+                                                        <label class="d-block mb-2"><strong>Your Rating:</strong></label>
+                                                        <div class="rating-input">
+                                                            <input type="radio" id="star5" name="rating" value="5">
+                                                            <label for="star5"><i class="far fa-star rating-star"></i></label>
+                                                            <input type="radio" id="star4" name="rating" value="4">
+                                                            <label for="star4"><i class="far fa-star rating-star"></i></label>
+                                                            <input type="radio" id="star3" name="rating" value="3">
+                                                            <label for="star3"><i class="far fa-star rating-star"></i></label>
+                                                            <input type="radio" id="star2" name="rating" value="2">
+                                                            <label for="star2"><i class="far fa-star rating-star"></i></label>
+                                                            <input type="radio" id="star1" name="rating" value="1" required>
+                                                            <label for="star1"><i class="far fa-star rating-star"></i></label>
+                                                        </div>
+                                                        <small class="text-muted">Click to rate this product</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-4">
+                                                        <label for="reviewText" class="mb-2"><strong>Your Review:</strong></label>
+                                                        <textarea class="form-control" id="reviewText" name="comment" rows="4" required placeholder="Tell us what you think about this product..."></textarea>
+                                                        <small class="text-muted">Minimum 10 characters required</small>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="form-group mb-4">
-                                                <label for="reviewText" class="mb-2">Your Review:</label>
-                                                <textarea class="form-control" id="reviewText" name="comment" rows="4" required placeholder="Share your experience with this product..."></textarea>
-                                                <small class="text-muted">Your review will help other shoppers make informed decisions.</small>
+                                            <div class="text-center">
+                                                <button type="submit" class="boxed-btn">
+                                                    <i class="fas fa-paper-plane"></i> Submit Review
+                                                </button>
                                             </div>
-                                            <button type="submit" class="boxed-btn">Submit Review</button>
                                         </form>
                                     </div>
-                                    @else
-                                    <div class="review-login-prompt mt-4 p-4 text-center bg-light">
-                                        <p class="mb-0">Please <a href="{{ route('login') }}" class="text-primary">sign in</a> to write a review.</p>
+                                </div>
+                                @else
+                                <div class="review-login-prompt mb-5 p-4 text-center">
+                                    <div class="login-prompt-content">
+                                        <i class="fas fa-user-lock fa-2x text-muted mb-3"></i>
+                                        <h5>Want to leave a review?</h5>
+                                        <p class="mb-3">Please <a href="{{ route('login') }}" class="text-primary font-weight-bold">sign in</a> to share your experience with this product.</p>
+                                        <a href="{{ route('login') }}" class="btn btn-primary">Sign In to Review</a>
                                     </div>
-                                    @endauth
+                                </div>
+                                @endauth
+                                
+                                <!-- Customer reviews section -->
+                                <div class="customer-reviews">
+                                    <div class="reviews-header">
+                                        <h4><i class="fas fa-comments"></i> Customer Reviews</h4>
+                                        @if($product->review_count > 0)
+                                            <p class="text-muted">See what our customers are saying about this product</p>
+                                        @endif
+                                    </div>
+                                    
+                                    @if(isset($product->reviews) && $product->reviews->count() > 0)
+                                        <div class="reviews-list">
+                                            @foreach($product->reviews as $review)
+                                            <div class="review-item">
+                                                <div class="review-header">
+                                                    <div class="reviewer-info">
+                                                        <div class="reviewer-avatar">
+                                                            <i class="fas fa-user-circle fa-2x text-muted"></i>
+                                                        </div>
+                                                        <div class="reviewer-details">
+                                                            <h5 class="reviewer-name">{{ $review->user->name }}</h5>
+                                                            <div class="review-meta">
+                                                                <div class="reviewer-rating">
+                                                                    @for($i = 1; $i <= 5; $i++)
+                                                                        @if($i <= $review->rating)
+                                                                            <i class="fas fa-star"></i>
+                                                                        @else
+                                                                            <i class="far fa-star"></i>
+                                                                        @endif
+                                                                    @endfor
+                                                                </div>
+                                                                <span class="review-date">{{ $review->created_at->format('M d, Y') }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="review-content">
+                                                    <p>{{ $review->comment ?? 'No comment provided.' }}</p>
+                                                </div>
+                                            </div>
+                                            @if(!$loop->last)
+                                                <hr class="review-divider">
+                                            @endif
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="no-reviews">
+                                            <div class="no-reviews-content">
+                                                <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                                                <h5>No reviews yet</h5>
+                                                <p>Be the first to review this product and help other customers make informed decisions!</p>
+                                                @auth
+                                                    <a href="#" onclick="$('#reviews-tab').click(); $('#reviewText').focus();" class="btn btn-outline-primary">
+                                                        Write First Review
+                                                    </a>
+                                                @endauth
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -490,6 +578,764 @@
 
 @section('styles')
 <style>
+    /* ===============================================
+       IMPROVED SINGLE PRODUCT PAGE STYLES
+       =============================================== */
+    
+    /* Main Product Image Styles */
+    .main-image-container {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        background: #f8f9fa;
+        aspect-ratio: 1;
+    }
+    
+    .main-product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+        cursor: zoom-in;
+    }
+    
+    .main-product-image:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Out of Stock Overlay */
+    .out-of-stock-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+    
+    .out-of-stock-text {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: #dc3545;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+    }
+    
+    /* Thumbnail Gallery Styles */
+    .thumbnail-carousel {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        padding: 15px 0;
+    }
+    
+    .thumbnail-item {
+        flex: 0 0 auto;
+    }
+    
+    .product-image-thumb {
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 3px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+    
+    .product-image-thumb:hover {
+        border-color: #f28123;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(242,129,35,0.3);
+    }
+    
+    .product-image-thumb.active {
+        border-color: #f28123;
+        box-shadow: 0 4px 15px rgba(242,129,35,0.4);
+    }
+    
+    .thumbnail-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .product-image-thumb:hover .thumbnail-img {
+        transform: scale(1.1);
+    }
+    
+    /* Product Information Enhancements */
+    .single-product-content {
+        padding-left: 30px;
+    }
+    
+    .product-header {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 25px;
+        margin-bottom: 25px;
+    }
+    
+    .product-title {
+        color: #2c3e50;
+        font-size: 2.2rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        line-height: 1.3;
+    }
+    
+    .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .product-rating i {
+        color: #f28123;
+        font-size: 1.1rem;
+    }
+    
+    .rating-count {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .product-categories {
+        margin-bottom: 20px;
+    }
+    
+    .category-label {
+        font-weight: 600;
+        color: #495057;
+        margin-right: 8px;
+    }
+    
+    .category-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #f28123, #e67e22);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-right: 8px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Price Section Improvements */
+    .product-price-section {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 4px solid #f28123;
+        margin-bottom: 25px;
+    }
+    
+    .current-price {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #27ae60;
+        margin-right: 15px;
+    }
+    
+    .original-price {
+        font-size: 1.3rem;
+        color: #6c757d;
+        text-decoration: line-through;
+        margin-right: 15px;
+    }
+    
+    .discount-percentage {
+        background: #e74c3c;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Stock Availability */
+    .product-availability {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+    
+    .in-stock {
+        color: #27ae60;
+        font-weight: 600;
+        background: rgba(39,174,96,0.1);
+        padding: 12px 20px;
+        border-radius: 8px;
+        border-left: 4px solid #27ae60;
+    }
+    
+    .out-of-stock {
+        color: #e74c3c;
+        font-weight: 600;
+        background: rgba(231,76,60,0.1);
+        padding: 12px 20px;
+        border-radius: 8px;
+        border-left: 4px solid #e74c3c;
+    }
+    
+    .in-stock i, .out-of-stock i {
+        margin-right: 8px;
+        font-size: 1.1rem;
+    }
+    
+    /* Enhanced Review Section Styles */
+    .write-review {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        padding: 30px;
+        border: 2px solid #f28123;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 15px rgba(242,129,35,0.1);
+    }
+    
+    .review-form-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .review-form-header h4 {
+        color: #2c3e50;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .review-form-header i {
+        color: #f28123;
+        margin-right: 10px;
+    }
+    
+    .review-form-container {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Star Rating Improvements */
+    .rating-input {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .rating-input input {
+        display: none;
+    }
+    
+    .rating-input label {
+        cursor: pointer;
+        padding: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .rating-input label i {
+        font-size: 1.8rem;
+        color: #ddd;
+        transition: all 0.3s ease;
+    }
+    
+    .rating-input label:hover i,
+    .rating-input label:hover ~ label i {
+        color: #f28123;
+        transform: scale(1.2);
+    }
+    
+    .rating-input input:checked + label i,
+    .rating-input input:checked ~ label i {
+        color: #f28123;
+    }
+    
+    /* Login Prompt Styling */
+    .review-login-prompt {
+        background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+        border-radius: 12px;
+        border: none;
+        color: white;
+        margin-bottom: 40px;
+    }
+    
+    .login-prompt-content i {
+        opacity: 0.8;
+    }
+    
+    .login-prompt-content h5 {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    .login-prompt-content p {
+        color: rgba(255,255,255,0.9);
+        margin-bottom: 20px;
+    }
+    
+    .login-prompt-content a {
+        color: #74b9ff !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .btn-primary {
+        background: #74b9ff;
+        border-color: #74b9ff;
+        font-weight: 600;
+        padding: 10px 25px;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background: #0984e3;
+        border-color: #0984e3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(9,132,227,0.3);
+    }
+    
+    /* Customer Reviews Styling */
+    .reviews-header {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .reviews-header h4 {
+        color: #2c3e50;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .reviews-header i {
+        color: #f28123;
+        margin-right: 10px;
+    }
+    
+    .reviews-list {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .review-item {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        border-left: 4px solid #f28123;
+        transition: all 0.3s ease;
+    }
+    
+    .review-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    
+    .review-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .reviewer-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .reviewer-avatar i {
+        color: #6c757d;
+    }
+    
+    .reviewer-details {
+        flex: 1;
+    }
+    
+    .reviewer-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .review-meta {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .reviewer-rating i {
+        color: #f28123;
+        font-size: 0.9rem;
+    }
+    
+    .review-date {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    .review-content {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
+    
+    .review-content p {
+        color: #495057;
+        line-height: 1.6;
+        margin-bottom: 0;
+        font-size: 0.95rem;
+    }
+    
+    .review-divider {
+        border: none;
+        height: 2px;
+        background: linear-gradient(to right, transparent, #eee, transparent);
+        margin: 30px 0;
+    }
+    
+    /* No Reviews Styling */
+    .no-reviews {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        padding: 60px 40px;
+        text-align: center;
+        border: 2px dashed #dee2e6;
+    }
+    
+    .no-reviews-content i {
+        opacity: 0.6;
+        margin-bottom: 20px;
+    }
+    
+    .no-reviews-content h5 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    .no-reviews-content p {
+        color: #6c757d;
+        margin-bottom: 25px;
+        font-size: 1.05rem;
+    }
+    
+    .btn-outline-primary {
+        border-color: #f28123;
+        color: #f28123;
+        font-weight: 600;
+        padding: 12px 30px;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-primary:hover {
+        background: #f28123;
+        border-color: #f28123;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(242,129,35,0.3);
+    }
+    
+    /* Form Improvements */
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #f28123;
+        box-shadow: 0 0 0 0.2rem rgba(242,129,35,0.25);
+    }
+    
+    .boxed-btn {
+        background: linear-gradient(135deg, #f28123, #e67e22);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .boxed-btn:hover {
+        background: linear-gradient(135deg, #e67e22, #d35400);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(230,126,34,0.4);
+        color: white;
+    }
+    
+    .boxed-btn i {
+        margin-right: 8px;
+    }
+    
+    /* Legacy styles compatibility and remaining elements */
+    .product-details-out-of-stock {
+        color: #e74c3c;
+        font-weight: 600;
+    }
+    
+    .quantity-input {
+        display: flex;
+        align-items: center;
+        max-width: 120px;
+    }
+    
+    .quantity-btn {
+        background: #f28123;
+        color: white;
+        border: none;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .quantity-btn:hover {
+        background: #e67e22;
+    }
+    
+    .quantity-input input {
+        width: 50px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-left: none;
+        border-right: none;
+        height: 35px;
+    }
+    
+    .cart-btn {
+        background: #f28123;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        transition: all 0.3s ease;
+    }
+    
+    .cart-btn:hover:not(.disabled) {
+        background: #e67e22;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(242,129,35,0.3);
+    }
+    
+    .cart-btn.disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .wishlist-btn {
+        background: transparent;
+        border: 2px solid #e74c3c;
+        color: #e74c3c;
+        padding: 10px 15px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+        margin-left: 10px;
+    }
+    
+    .wishlist-btn:hover,
+    .wishlist-btn.active {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .shipping-info {
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    
+    .shipping-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        color: #495057;
+    }
+    
+    .shipping-item i {
+        color: #f28123;
+        margin-right: 10px;
+        width: 20px;
+    }
+    
+    /* Rating breakdown enhancements */
+    .rating-breakdown {
+        padding-left: 20px;
+    }
+    
+    .rating-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 10px;
+    }
+    
+    .rating-stars {
+        min-width: 60px;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .rating-stars i {
+        color: #f28123;
+        margin-left: 5px;
+    }
+    
+    .progress {
+        flex: 1;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        background: linear-gradient(135deg, #f28123, #e67e22);
+        transition: width 0.6s ease;
+    }
+    
+    .rating-count {
+        min-width: 30px;
+        text-align: right;
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    /* Average rating improvements */
+    .average-rating {
+        padding: 20px;
+    }
+    
+    .average-rating h2 {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #f28123;
+        margin-bottom: 10px;
+    }
+    
+    .average-rating .stars {
+        margin-bottom: 10px;
+    }
+    
+    .average-rating .stars i {
+        font-size: 1.2rem;
+        color: #f28123;
+        margin: 0 2px;
+    }
+    
+    .average-rating p {
+        color: #6c757d;
+        font-weight: 500;
+        margin-bottom: 0;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .single-product-content {
+            padding-left: 0;
+            margin-top: 30px;
+        }
+        
+        .product-title {
+            font-size: 1.8rem;
+        }
+        
+        .current-price {
+            font-size: 1.6rem;
+        }
+        
+        .main-image-container {
+            margin-bottom: 20px;
+        }
+        
+        .thumbnail-carousel {
+            justify-content: center;
+        }
+        
+        .review-form-container {
+            padding: 20px;
+        }
+        
+        .review-item {
+            padding: 20px;
+        }
+        
+        .no-reviews {
+            padding: 40px 20px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .product-image-thumb {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .thumbnail-carousel {
+            gap: 8px;
+        }
+        
+        .rating-input label i {
+            font-size: 1.5rem;
+        }
+        
+        .product-price-section {
+            padding: 15px;
+        }
+        
+        .write-review {
+            padding: 20px;
+        }
+    }
+
+    /* Fix for filled stars - ensure proper coloring */
+    .fas.fa-star, 
+    .rating-input label i.fas.fa-star,
+    .rating-input input:checked + label i,
+    .rating-input input:checked ~ label i,
+    .rating-input label:hover i,
+    .rating-input label:hover ~ label i {
+        color: #f28123 !important;
+    }
+    
     /* Product gallery */
     .product-image-thumb {
         cursor: pointer;
@@ -624,12 +1470,14 @@
         font-size: 14px;
         margin-left: 10px;
     }
-      /* Stock status */
+    
+    /* Stock status */
     .in-stock {
         color: #28a745;
         font-weight: bold;
     }
-      /* Product stock status in the details section (not the badge) */
+    
+    /* Product stock status in the details section (not the badge) */
     .product-details-out-of-stock {
         color: #dc3545;
         font-weight: bold;
@@ -683,7 +1531,8 @@
         text-align: center;
         font-size: 16px;
     }
-      /* Action buttons */
+    
+    /* Action buttons */
     .action-buttons {
         display: flex;
         gap: 10px;
@@ -754,7 +1603,9 @@
     
     .product-action-buttons .cart-btn.disabled:hover {
         transform: none;
-    }    .wishlist-btn {
+    }
+    
+    .wishlist-btn {
         background-color: #f5f5f5;
         color: #555;
         border: none;
@@ -887,7 +1738,8 @@
     .progress-bar {
         background-color: #f28123;
     }
-      .review-item {
+    
+    .review-item {
         margin-bottom: 20px;
         padding: 15px;
         border: 1px solid #eee;
@@ -917,14 +1769,12 @@
         font-size: 14px;
         line-height: 1.6;
     }
+    
+    .reviewer-rating {
         margin-bottom: 5px;
     }
     
-    .reviewer-rating {
-        color: #f28123;
-        margin-bottom: 10px;
-    }
-      .rating-input {
+    .rating-input {
         display: flex;
         flex-direction: row-reverse;  /* Reversed to match the star order with values */
         justify-content: flex-end;
@@ -1036,7 +1886,8 @@
         margin-top: auto; /* Push buttons to bottom */
         border-top: 1px solid #f1f1f1;
     }
-      .wishlist-btn {
+    
+    .wishlist-btn {
         margin: 0%;
         background-color: #f5f5f5;
         color: #555;
@@ -1052,7 +1903,8 @@
         transition: all 0.3s;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-      .wishlist-btn:hover {
+    
+    .wishlist-btn:hover {
         background-color: #f28123;
         color: white;
         transform: translateY(-2px);
@@ -1074,7 +1926,9 @@
         color: #f28123;
         margin-right: 2px;
     }
-      /* Rating input for writing reviews */    .rating-input {
+    
+    /* Rating input for writing reviews */
+    .rating-input {
         display: flex;
         flex-direction: row-reverse;  /* Reversed to match the star order with values */
         justify-content: flex-end;
@@ -1091,7 +1945,7 @@
         color: #ddd;
         padding: 0 5px;
         transition: all 0.2s ease;
-    }      
+    }
     
     /* Hover effect */
     .rating-input label:hover i,
@@ -1131,16 +1985,6 @@
         background-color: #f9f9f9;
         border-radius: 5px;
         text-align: center;
-    }
-
-    /* Fix for filled stars - ensure proper coloring */
-    .fas.fa-star, 
-    .rating-input label i.fas.fa-star,
-    .rating-input input:checked + label i,
-    .rating-input input:checked ~ label i,
-    .rating-input label:hover i,
-    .rating-input label:hover ~ label i {
-        color: #f28123 !important;
     }
 </style>
 @endsection
@@ -1185,7 +2029,8 @@
             });
         });
     }
-      $(document).ready(function() {
+    
+    $(document).ready(function() {
         // Handle star rating selection
         $('.rating-input input').on('change', function() {
             const value = $(this).val();
@@ -1205,7 +2050,8 @@
             // Add a small delay and update again (helps with some browser rendering issues)
             setTimeout(updateStarAppearance, 50);
         });
-          // For accessibility, add keyboard navigation to stars
+        
+        // For accessibility, add keyboard navigation to stars
         $('.rating-input input').on('keydown', function(e) {
             const currentValue = parseInt($(this).val());
             
@@ -1225,308 +2071,224 @@
         // Product tabs
         $('#productTabs a').on('click', function(e) {
             e.preventDefault();
-            $(this).tab('show');        });    // Wishlist functionality
-    $(document).ready(function() {
-        // Check if user is logged in
-        const isLoggedIn = $('.wishlist-form').length > 0;
+            $(this).tab('show');
+        });
         
-        if (isLoggedIn) {
-            // Function to update wishlist localStorage
-            function updateWishlistLocalStorage(productId, isInWishlist) {
-                let wishlist = JSON.parse(localStorage.getItem('userWishlist')) || {};
-                if (isInWishlist) {
-                    wishlist[productId] = true;
-                } else {
-                    delete wishlist[productId];
+        // Wishlist functionality
+        $(document).ready(function() {
+            // Check if user is logged in
+            const isLoggedIn = $('.wishlist-form').length > 0;
+            
+            if (isLoggedIn) {
+                // Function to update wishlist localStorage
+                function updateWishlistLocalStorage(productId, isInWishlist) {
+                    let wishlist = JSON.parse(localStorage.getItem('userWishlist')) || {};
+                    if (isInWishlist) {
+                        wishlist[productId] = true;
+                    } else {
+                        delete wishlist[productId];
+                    }
+                    localStorage.setItem('userWishlist', JSON.stringify(wishlist));
                 }
-                localStorage.setItem('userWishlist', JSON.stringify(wishlist));
-            }
-            
-            // Get all wishlist buttons
-            const wishlistButtons = $('.wishlist-btn');
-            
-            // Apply localStorage state first for immediate feedback
-            const savedWishlist = JSON.parse(localStorage.getItem('userWishlist')) || {};
-            
-            wishlistButtons.each(function() {
-                const button = $(this);
-                const productId = button.data('product-id');
-                if (savedWishlist[productId]) {
-                    button.addClass('active');
-                }
-            });
-            
-            // Then verify with the server
-            wishlistButtons.each(function() {
-                const button = $(this);
-                const productId = button.data('product-id');
                 
-                $.get(`/wishlist/check?product_id=${productId}`, function(data) {
-                    if (data.inWishlist) {
+                // Get all wishlist buttons
+                const wishlistButtons = $('.wishlist-btn');
+                
+                // Apply localStorage state first for immediate feedback
+                const savedWishlist = JSON.parse(localStorage.getItem('userWishlist')) || {};
+                
+                wishlistButtons.each(function() {
+                    const button = $(this);
+                    const productId = button.data('product-id');
+                    if (savedWishlist[productId]) {
                         button.addClass('active');
-                        // Update localStorage if needed
-                        updateWishlistLocalStorage(productId, true);
-                    } else {
+                    }
+                });
+                
+                // Then verify with the server
+                wishlistButtons.each(function() {
+                    const button = $(this);
+                    const productId = button.data('product-id');
+                    
+                    $.get(`/wishlist/check?product_id=${productId}`, function(data) {
+                        if (data.inWishlist) {
+                            button.addClass('active');
+                            // Update localStorage if needed
+                            updateWishlistLocalStorage(productId, true);
+                        } else {
+                            button.removeClass('active');
+                            // Update localStorage if needed
+                            updateWishlistLocalStorage(productId, false);
+                        }
+                    });
+                });
+                
+                // Add event listeners to wishlist forms
+                $('.wishlist-form').on('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const form = $(this);
+                    const button = form.find('.wishlist-btn');
+                    const productId = button.data('product-id');
+                    const csrfToken = $('meta[name="csrf-token"]').attr('content');
+                    const isActive = button.hasClass('active');
+                    
+                    // Immediately toggle the button state for responsive UI
+                    if (isActive) {
                         button.removeClass('active');
-                        // Update localStorage if needed
-                        updateWishlistLocalStorage(productId, false);
+                    } else {
+                        button.addClass('active');
                     }
-                });
-            });
-            
-            // Add event listeners to wishlist forms
-            $('.wishlist-form').on('submit', function(e) {
-                e.preventDefault();
-                
-                const form = $(this);
-                const button = form.find('.wishlist-btn');
-                const productId = button.data('product-id');
-                const csrfToken = $('meta[name="csrf-token"]').attr('content');
-                const isActive = button.hasClass('active');
-                
-                // Immediately toggle the button state for responsive UI
-                if (isActive) {
-                    button.removeClass('active');
-                } else {
-                    button.addClass('active');
-                }
-                
-                // Immediately update localStorage for instant cross-page feedback
-                updateWishlistLocalStorage(productId, !isActive);
-                
-                if (isActive) {
-                    // Remove from wishlist
-                    $.ajax({
-                        url: '/wishlist/remove',
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        data: JSON.stringify({
-                            product_id: productId
-                        }),
-                        contentType: 'application/json',
-                        success: function(data) {
-                            if (data.success) {
-                                showToast('Product removed from wishlist!');
-                                
-                                // Update all instances of this product's wishlist button
-                                updateAllWishlistButtons(productId, false);
-                            } else {
-                                // If there was an error, revert the button state
+                    
+                    // Immediately update localStorage for instant cross-page feedback
+                    updateWishlistLocalStorage(productId, !isActive);
+                    
+                    if (isActive) {
+                        // Remove from wishlist
+                        $.ajax({
+                            url: '/wishlist/remove',
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            data: JSON.stringify({
+                                product_id: productId
+                            }),
+                            contentType: 'application/json',
+                            success: function(data) {
+                                if (data.success) {
+                                    showToast('Product removed from wishlist!');
+                                    
+                                    // Update all instances of this product's wishlist button
+                                    updateAllWishlistButtons(productId, false);
+                                } else {
+                                    // If there was an error, revert the button state
+                                    button.addClass('active');
+                                    // Revert localStorage
+                                    updateWishlistLocalStorage(productId, true);
+                                    showToast('Error removing product from wishlist');
+                                }
+                            },
+                            error: function() {
+                                // Revert button state on error
                                 button.addClass('active');
                                 // Revert localStorage
                                 updateWishlistLocalStorage(productId, true);
                                 showToast('Error removing product from wishlist');
                             }
-                        },
-                        error: function() {
-                            // Revert button state on error
-                            button.addClass('active');
-                            // Revert localStorage
-                            updateWishlistLocalStorage(productId, true);
-                            showToast('Error removing product from wishlist');
-                        }
-                    });
-                } else {
-                    // Add to wishlist
-                    const formData = new FormData(form[0]);
-                    
-                    $.ajax({
-                        url: form.attr('action'),
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(data) {
-                            if (data.success) {
-                                showToast('Product added to wishlist!');
-                                
-                                // Update all instances of this product's wishlist button
-                                updateAllWishlistButtons(productId, true);
-                            } else {
-                                // If there was an error, revert the button state
+                        });
+                    } else {
+                        // Add to wishlist
+                        const formData = new FormData(form[0]);
+                        
+                        $.ajax({
+                            url: form.attr('action'),
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            success: function(data) {
+                                if (data.success) {
+                                    showToast('Product added to wishlist!');
+                                    
+                                    // Update all instances of this product's wishlist button
+                                    updateAllWishlistButtons(productId, true);
+                                } else {
+                                    // If there was an error, revert the button state
+                                    button.removeClass('active');
+                                    // Revert localStorage
+                                    updateWishlistLocalStorage(productId, false);
+                                    showToast('Error adding product to wishlist');
+                                }
+                            },
+                            error: function() {
+                                // Revert button state on error
                                 button.removeClass('active');
                                 // Revert localStorage
                                 updateWishlistLocalStorage(productId, false);
                                 showToast('Error adding product to wishlist');
                             }
-                        },
-                        error: function() {
-                            // Revert button state on error
-                            button.removeClass('active');
-                            // Revert localStorage
-                            updateWishlistLocalStorage(productId, false);
-                            showToast('Error adding product to wishlist');
-                        }
-                    });
-                }
-            });
-            
-            // Function to update all wishlist buttons for the same product
-            function updateAllWishlistButtons(productId, isInWishlist) {
-                const allButtons = $(`.wishlist-btn[data-product-id="${productId}"]`);
-                
-                allButtons.each(function() {
-                    const btn = $(this);
-                    if (isInWishlist) {
-                        btn.addClass('active');
-                    } else {
-                        btn.removeClass('active');
+                        });
                     }
                 });
                 
-                // Update localStorage
-                updateWishlistLocalStorage(productId, isInWishlist);
-            }
-                
-                if (isActive) {
-                    // Remove from wishlist
-                    $.ajax({
-                        url: '/wishlist/remove',
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        data: JSON.stringify({
-                            product_id: productId
-                        }),
-                        contentType: 'application/json',
-                        success: function(data) {
-                            if (data.success) {
-                                showToast('Product removed from wishlist!');
-                                
-                                // Update all instances of this product's wishlist button
-                                updateAllWishlistButtons(productId, false);
-                            } else {
-                                // If there was an error, revert the button state
-                                button.addClass('active');
-                                // Revert localStorage
-                                updateWishlistLocalStorage(productId, true);
-                                showToast('Error removing product from wishlist');
-                            }
-                        },
-                        error: function() {
-                            // Revert button state on error
-                            button.addClass('active');
-                            // Revert localStorage
-                            updateWishlistLocalStorage(productId, true);
-                            showToast('Error removing product from wishlist');
+                // Function to update all wishlist buttons for the same product
+                function updateAllWishlistButtons(productId, isInWishlist) {
+                    const allButtons = $(`.wishlist-btn[data-product-id="${productId}"]`);
+                    
+                    allButtons.each(function() {
+                        const btn = $(this);
+                        if (isInWishlist) {
+                            btn.addClass('active');
+                        } else {
+                            btn.removeClass('active');
                         }
                     });
-                } else {
-                    // Add to wishlist
-                    const formData = new FormData(form[0]);
                     
-                    $.ajax({
-                        url: form.attr('action'),
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(data) {
-                            if (data.success) {
-                                showToast('Product added to wishlist!');
-                                
-                                // Update all instances of this product's wishlist button
-                                updateAllWishlistButtons(productId, true);
-                            } else {
-                                // If there was an error, revert the button state
-                                button.removeClass('active');
-                                // Revert localStorage
-                                updateWishlistLocalStorage(productId, false);
-                                showToast('Error adding product to wishlist');
-                            }
-                        },
-                        error: function() {
-                            // Revert button state on error
-                            button.removeClass('active');
-                            // Revert localStorage
-                            updateWishlistLocalStorage(productId, false);
-                            showToast('Error adding product to wishlist');
+                    // Update localStorage
+                    updateWishlistLocalStorage(productId, isInWishlist);
+                }
+                
+                // Helper function to show toast message
+                function showToast(message) {
+                    // Create toast container if it doesn't exist
+                    let toastContainer = $('.toast-container');
+                    
+                    if (toastContainer.length === 0) {
+                        // Create toast container
+                        toastContainer = $('<div class="toast-container"></div>');
+                        $('body').append(toastContainer);
+                        
+                        // Add toast container styles if they don't exist
+                        if ($('#toast-styles').length === 0) {
+                            const styles = `
+                                <style id="toast-styles">
+                                    .toast-container {
+                                        position: fixed;
+                                        top: 20px;
+                                        right: 20px;
+                                        z-index: 9999;
+                                    }
+                                    .toast {
+                                        background-color: #333;
+                                        color: white;
+                                        padding: 15px 25px;
+                                        border-radius: 5px;
+                                        margin-bottom: 10px;
+                                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                                        animation: toast-in-right 0.5s;
+                                    }
+                                    @keyframes toast-in-right {
+                                        from { transform: translateX(100%); }
+                                        to { transform: translateX(0); }
+                                    }
+                                </style>
+                            `;
+                            $('head').append(styles);
                         }
-                    });
-                }
-            });
-            
-            // Function to update all wishlist buttons for the same product
-            function updateAllWishlistButtons(productId, isInWishlist) {
-                const allButtons = $(`.wishlist-btn[data-product-id="${productId}"]`);
-                
-                allButtons.each(function() {
-                    const btn = $(this);
-                    if (isInWishlist) {
-                        btn.addClass('active');
-                    } else {
-                        btn.removeClass('active');
                     }
-                });
-                
-                // Update localStorage
-                updateWishlistLocalStorage(productId, isInWishlist);
-            }
-              // Helper function to show toast message
-            function showToast(message) {
-                // Create toast container if it doesn't exist
-                let toastContainer = $('.toast-container');
-                
-                if (toastContainer.length === 0) {
-                    // Create toast container
-                    toastContainer = $('<div class="toast-container"></div>');
-                    $('body').append(toastContainer);
                     
-                    // Add toast container styles if they don't exist
-                    if ($('#toast-styles').length === 0) {
-                        const styles = `
-                            <style id="toast-styles">
-                                .toast-container {
-                                    position: fixed;
-                                    top: 20px;
-                                    right: 20px;
-                                    z-index: 9999;
-                                }
-                                .toast {
-                                    background-color: #333;
-                                    color: white;
-                                    padding: 15px 25px;
-                                    border-radius: 5px;
-                                    margin-bottom: 10px;
-                                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                                    animation: toast-in-right 0.5s;
-                                }
-                                @keyframes toast-in-right {
-                                    from { transform: translateX(100%); }
-                                    to { transform: translateX(0); }
-                                }
-                            </style>
-                        `;
-                        $('head').append(styles);
-                    }
-                }
-                
-                // Create toast message
-                const toast = $('<div class="toast"></div>').text(message);
-                toastContainer.append(toast);
-                
-                // Remove toast after 3 seconds
-                setTimeout(function() {
-                    toast.css({
-                        'opacity': '0',
-                        'transition': 'opacity 0.5s'
-                    });
+                    // Create toast message
+                    const toast = $('<div class="toast"></div>').text(message);
+                    toastContainer.append(toast);
                     
+                    // Remove toast after 3 seconds
                     setTimeout(function() {
-                        toast.remove();
-                    }, 500);
-                }, 3000);
+                        toast.css({
+                            'opacity': '0',
+                            'transition': 'opacity 0.5s'
+                        });
+                        
+                        setTimeout(function() {
+                            toast.remove();
+                        }, 500);
+                    }, 3000);
+                }
             }
-        }
+        });
     });
 </script>
 <script src="{{ asset('assets/js/enhanced-star-rating.js') }}"></script>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\AuditLoggable;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Category;
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    use AuditLoggable;
     /**
      * Display a listing of the products.
      *
@@ -95,18 +97,15 @@ class ProductController extends Controller
                 return $category->pivot->is_primary_category;
             });
         }
-        
-        // Get categories for filter dropdown
+          // Get categories for filter dropdown
         $categories = Category::orderBy('name')->get();
-          // Log the action
-        AdminAuditLog::create([
-            'admin_id' => auth('admin')->id(),
-            'action' => 'view_list',
-            'resource' => 'products',
-            'resource_id' => 0, // Using 0 as default for list views where no specific resource ID is applicable
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent()
-        ]);
+          
+        // Log the products listing view
+        $this->logCustomAction(
+            'view_products_list',
+            null,
+            "Viewed products listing page with filters: " . json_encode($request->only(['search', 'category_id', 'status']))
+        );
         
         return view('admin.products.index', compact('products', 'categories'));
     }
@@ -215,15 +214,8 @@ class ProductController extends Controller
                         $imageIndex++;
                     }
                 }
-            }// Log the action
-            AdminAuditLog::create([
-                'admin_id' => auth('admin')->id(),
-                'action' => 'create',
-                'resource' => 'products',
-                'resource_id' => $product->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent()
-            ]);
+            }            // Log the product creation
+            $this->logCreate($product, "Created product: {$product->name} (SKU: {$product->sku})");
 
             DB::commit();
             
@@ -255,21 +247,17 @@ class ProductController extends Controller
         $leafCategories = $product->categories->filter(function($category) {
             return $category->isLeafCategory();
         });
-        
-        // Sort leaf categories by primary status first, then by name
+          // Sort leaf categories by primary status first, then by name
         $product->directCategories = $leafCategories->sortByDesc(function($category) {
             return $category->pivot->is_primary_category;
         });
           
-        // Log the action
-        AdminAuditLog::create([
-            'admin_id' => auth('admin')->id(),
-            'action' => 'view',
-            'resource' => 'products',
-            'resource_id' => $product->id,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
+        // Log the product view
+        $this->logCustomAction(
+            'view_product',
+            $product,
+            "Viewed product details: {$product->name} (SKU: {$product->sku})"
+        );
         
         return view('admin.products.show', compact('product'));
     }
@@ -321,11 +309,12 @@ class ProductController extends Controller
             'main_image' => 'nullable|string',
             'delete_images' => 'nullable|array',
             'delete_images.*' => 'exists:product_images,id'
-        ]);
-
-        DB::beginTransaction();
+        ]);        DB::beginTransaction();
 
         try {
+            // Store original data for logging
+            $originalData = $product->toArray();
+            
             // Update product
             $product->update([
                 'name' => $validated['name'],
@@ -442,16 +431,10 @@ class ProductController extends Controller
                         ]);
                         $urlIndex++;
                     }
-                }
-            }// Log the action
-            AdminAuditLog::create([
-                'admin_id' => auth('admin')->id(),
-                'action' => 'update',
-                'resource' => 'products',
-                'resource_id' => $product->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent()
-            ]);
+                }            }
+
+            // Log the product update
+            $this->logUpdate($product, $originalData, "Updated product: {$product->name} (SKU: {$product->sku})");
 
             DB::commit();
             
@@ -469,13 +452,16 @@ class ProductController extends Controller
      *
      * @param  int  $id
      * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
+     */    public function destroy($id)
     {
         $product = Product::findOrFail($id);
         $productName = $product->name;
+        $productSku = $product->sku;
 
         try {
+            // Log the product deletion before deleting
+            $this->logDelete($product, "Deleted product: {$productName} (SKU: {$productSku})");
+            
             // Delete all related images from storage
             foreach ($product->images as $image) {
                 if (Storage::disk('public')->exists($image->image_url)) {
@@ -485,15 +471,6 @@ class ProductController extends Controller
             
             // The product will be soft deleted, related records will be cascade soft deleted
             $product->delete();
-              // Log the action
-            AdminAuditLog::create([
-                'admin_id' => auth('admin')->id(),
-                'action' => 'delete',
-                'resource' => 'products',
-                'resource_id' => $id,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
             
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product deleted successfully!');

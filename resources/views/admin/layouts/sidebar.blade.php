@@ -71,27 +71,37 @@
         Marketing & Reports
     </div>    <!-- Nav Item - Promotions -->
     <li class="nav-item {{ request()->routeIs('admin.promotions.*') ? 'active' : '' }}">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePromotions"
-            aria-expanded="true" aria-controls="collapsePromotions">
+        <a class="nav-link" href="{{ route('admin.promotions.index') }}">
             <i class="fas fa-fw fa-percentage"></i>
             <span>Promotions</span>
         </a>
-        <div id="collapsePromotions" class="collapse {{ request()->routeIs('admin.promotions.*') ? 'show' : '' }}" aria-labelledby="headingPromotions" data-parent="#accordionSidebar">
-            <div class="bg-white py-2 collapse-inner rounded">
-                <h6 class="collapse-header">Promotion Management:</h6>
-                <a class="collapse-item" href="{{ route('admin.promotions.discounts') }}">Discounts</a>
-                <a class="collapse-item" href="{{ route('admin.promotions.promo-codes') }}">Promo Codes</a>
-            </div>
+    </li>    <!-- Nav Item - Reviews -->
+    <li class="nav-item {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
+        <div class="nav-link-wrapper position-relative">
+            <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+                <i class="fas fa-fw fa-star"></i>
+                <span>Reviews</span>
+                {{-- @if(isset($pendingReviewsCount) && $pendingReviewsCount > 0)
+                    <span class="badge badge-warning ml-2 position-relative sidebar-review-badge" 
+                          id="sidebarReviewBadge"
+                          data-notification-id="sidebar-reviews-{{ $pendingReviewsCount }}"
+                          data-notification-type="reviews"
+                          data-count="{{ $pendingReviewsCount }}">
+                        {{ $pendingReviewsCount }}
+                        <button type="button" class="btn btn-sm p-0 ml-1 sidebar-badge-dismiss" 
+                                data-notification-id="sidebar-reviews-{{ $pendingReviewsCount }}"
+                                data-notification-type="reviews"
+                                title="Dismiss review badge"
+                                style="background: none; border: none; color: rgba(255,255,255,0.8); font-size: 10px; line-height: 1;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                @endif --}}
+            </a>
         </div>
     </li>
 
-    <!-- Nav Item - Reviews -->
-    <li class="nav-item {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.reviews.index') }}">
-            <i class="fas fa-fw fa-star"></i>
-            <span>Reviews</span>
-        </a>
-    </li>    <!-- Nav Item - Reports -->
+    {{-- <!-- Nav Item - Reports -->
     <li class="nav-item {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseReports"
             aria-expanded="true" aria-controls="collapseReports">
@@ -106,7 +116,7 @@
                 <a class="collapse-item" href="{{ route('admin.reports.customers') }}">Customer Reports</a>
             </div>
         </div>
-    </li>
+    </li> --}}
 
     <!-- Divider -->
     <hr class="sidebar-divider">
@@ -116,35 +126,37 @@
         Support & Settings
     </div>
 
-    <!-- Nav Item - Support Tickets -->
+    {{-- <!-- Nav Item - Support Tickets -->
     <li class="nav-item {{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.support-tickets.index') }}">
             <i class="fas fa-fw fa-life-ring"></i>
             <span>Support Tickets</span>
         </a>
-    </li>    <!-- Nav Item - Settings -->
+    </li>     --}}
+    
+    {{-- <!-- Nav Item - Settings -->
     <li class="nav-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.settings.index') }}">
             <i class="fas fa-fw fa-cog"></i>
             <span>Settings</span>
         </a>
-    </li>
+    </li> --}}    <!-- Nav Item - Admins (Super Admin Only) -->
+    @if(Auth::guard('admin')->check() && Auth::guard('admin')->user()->role === 'Super Admin')
+        <li class="nav-item {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.admins.index') }}">
+                <i class="fas fa-fw fa-user-shield"></i>
+                <span>Admin Users</span>
+            </a>
+        </li>
+    @endif
 
-    <!-- Nav Item - Admins -->
-    <li class="nav-item {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.admins.index') }}">
-            <i class="fas fa-fw fa-user-shield"></i>
-            <span>Admin Users</span>
-        </a>
-    </li>
-
-    <!-- Nav Item - Audit Logs -->
+    {{-- <!-- Nav Item - Audit Logs -->
     <li class="nav-item {{ request()->routeIs('admin.audit-logs.*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.audit-logs.index') }}">
             <i class="fas fa-fw fa-history"></i>
             <span>Audit Logs</span>
         </a>
-    </li>
+    </li> --}}
 
     <!-- Divider -->
     <hr class="sidebar-divider d-none d-md-block">

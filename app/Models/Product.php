@@ -66,69 +66,7 @@ class Product extends Model
         return $this->hasOne(Inventory::class);
     }
 
-    /**
-     * Update the in_stock status based on inventory quantity
-     */
-    public function updateStockStatus()
-    {
-        $inventory = $this->inventory;
-        if ($inventory) {
-            $this->in_stock = ($inventory->quantity > 0);
-            $this->save();
-        }
-        return $this;
-    }
 
-    /**
-     * Boot the model
-     */
-    protected static function boot()
-    {
-        parent::boot();
-        
-        // When inventory is updated, update the product in_stock status
-        static::created(function($product) {
-            $product->updateStockStatus();
-        });
-    }
-    
-    /**
-     * Get the in_stock attribute.
-     * This will ensure the in_stock flag is always correctly calculated.
-     *
-     * @return bool
-     */
-    public function getInStockAttribute()
-    {
-        if ($this->relationLoaded('inventory')) {
-            $productInventory = $this->inventory->first();
-            $quantity = $productInventory ? (int)$productInventory->quantity : 0;
-            return $quantity > 0;
-        }
-        
-        // Eager load inventory if not already loaded
-        $productInventory = $this->inventory()->first();
-        $quantity = $productInventory ? (int)$productInventory->quantity : 0;
-        return $quantity > 0;
-    }
-    
-    /**
-     * Get the stock_qty attribute.
-     * This will ensure the stock quantity is always correctly calculated.
-     *
-     * @return int
-     */
-    public function getStockQtyAttribute()
-    {
-        if ($this->relationLoaded('inventory')) {
-            $productInventory = $this->inventory->first();
-            return $productInventory ? (int)$productInventory->quantity : 0;
-        }
-        
-        // Eager load inventory if not already loaded
-        $productInventory = $this->inventory()->first();
-        return $productInventory ? (int)$productInventory->quantity : 0;
-    }
 
     public function reviews()
     {
@@ -208,6 +146,28 @@ class Product extends Model
             'cartItems',
             'wishlistItems'
         ];
+    }
+
+    /**
+     * Update the stock status based on inventory quantity
+     *
+     * @return void
+     */
+    public function updateStockStatus()
+    {
+        $inventory = $this->inventory;
+        
+        if ($inventory) {
+            $totalQuantity = $inventory->sum('quantity');
+            $this->update([
+                'in_stock' => $totalQuantity > 0
+            ]);
+        } else {
+            // If no inventory record exists, mark as out of stock
+            $this->update([
+                'in_stock' => false
+            ]);
+        }
     }
 
     /*

@@ -51,18 +51,20 @@
                         <tbody>
                             @foreach($cartItems as $item)
                             <tr class="table-body-row">                                <td class="product-remove">
-                                    <form action="{{ route('cart.remove') }}" method="POST">
+                                    <form action="{{ route('cart.remove') }}" method="POST" class="cart-remove-form">
                                         @csrf
                                         <input type="hidden" name="cart_item_id" value="{{ $item->id }}">
-                                        <button type="submit" class="btn-remove" style="background: none; border: none; color: #F28123; cursor: pointer; font-size: 20px;"><i
-                                                class="far fa-window-close"></i></button>
-                                    </form>
-                                </td><td class="product-image">
-                                    <img src="{{ asset($item->product->featured_image) }}" 
-                                         alt="{{ $item->product->name }}" 
-                                         style="width: 80px; height: 80px; object-fit: cover;"
-                                         onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                </td>                                <td class="product-name">{{ $item->product->name }}</td>
+                                        <button type="submit" class="btn-remove cart-remove-btn" style="background: none; border: none; color: #F28123; cursor: pointer; font-size: 20px; transition: all 0.3s ease;" title="Remove item">
+                                            <i class="far fa-window-close"></i>
+                                        </button>
+                                    </form>                                </td><td class="product-image">
+                                    <a href="{{ route('product.show', $item->product->id) }}" title="View {{ $item->product->name }}">
+                                        <img src="{{ asset($item->product->featured_image) }}" 
+                                             alt="{{ $item->product->name }}" 
+                                             style="width: 80px; height: 80px; object-fit: cover; cursor: pointer; transition: all 0.3s ease;"
+                                             onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
+                                    </a>
+                                </td><td class="product-name">{{ $item->product->name }}</td>
                                 <td class="product-price">
                                     @if($item->product->sale_price && $item->product->sale_price > 0)
                                         <span style="text-decoration: line-through; color: #999;">${{ number_format($item->product->price, 2) }}</span>
@@ -70,13 +72,14 @@
                                     @else
                                         ${{ number_format($item->product->price, 2) }}
                                     @endif
-                                </td><td class="product-quantity">
-                                    <form action="{{ route('cart.update') }}" method="POST" style="display: flex; align-items: center;">
+                                </td>                                <td class="product-quantity">
+                                    {{-- <form action="{{ route('cart.update') }}" method="POST" class="cart-update-form" style="display: flex; align-items: center;">
                                         @csrf
                                         <input type="hidden" name="cart_item_id" value="{{ $item->id }}">
                                         <input type="number" name="quantity" min="1" value="{{ $item->quantity }}" style="width: 70px; margin-right: 10px; border-radius: 3px; border: 1px solid #ddd; padding: 5px 10px;">
-                                        <button type="submit" style="background-color: #F28123; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer; transition: all 0.3s ease;">Update</button>
-                                    </form>
+                                        <button type="submit" class="cart-update-btn" style="background-color: #F28123; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer; transition: all 0.3s ease;">Update</button>
+                                    </form> --}}
+                                    <p>{{ $item->quantity }}</p>
                                 </td>
                                 <td class="product-total">${{ number_format($item->subtotal, 2) }}</td>
                             </tr>
@@ -102,10 +105,9 @@
                                 <th>Price</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr class="total-data">
+                        <tbody>                            <tr class="total-data">
                                 <td><strong>Subtotal: </strong></td>
-                                <td>${{ number_format($subtotal, 2) }}</td>
+                                <td data-cart-subtotal>${{ number_format($subtotal, 2) }}</td>
                             </tr>
                             <tr class="total-data">
                                 <td><strong>Shipping: </strong></td>
@@ -114,12 +116,12 @@
                             @if($discount > 0)
                             <tr class="total-data">
                                 <td><strong>Discount: </strong></td>
-                                <td>-${{ number_format($discount, 2) }}</td>
+                                <td data-cart-discount>-${{ number_format($discount, 2) }}</td>
                             </tr>
                             @endif
                             <tr class="total-data">
                                 <td><strong>Total: </strong></td>
-                                <td>${{ number_format($total, 2) }}</td>
+                                <td data-cart-total>${{ number_format($total, 2) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -131,17 +133,51 @@
                     </div>
                 </div>                <div class="coupon-section">
                     <h3>Apply Coupon</h3>
+                    
+                    @if(isset($cart) && $cart->promo_code)
+                    <!-- Display applied coupon -->
+                    <div class="applied-coupon-info" style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 3px; padding: 15px; margin-bottom: 10px; color: #155724;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>✓ Coupon Applied: {{ $cart->promo_code }}</strong>
+                                <br><small>You saved ${{ number_format($cart->discount, 2) }}</small>
+                            </div>
+                            <form action="{{ route('cart.remove-coupon') }}" method="POST" style="margin: 0;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" style="background-color: #dc3545; color: white; border: none; border-radius: 3px; padding: 8px 15px; font-size: 12px; cursor: pointer;">
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    @else
+                    <!-- Coupon application form -->
                     <div class="coupon-form-wrap">
-                        <form action="{{ route('cart.apply-promo') }}" method="POST">
+                        <form action="{{ route('cart.apply-promo') }}" method="POST" id="coupon-form">
                             @csrf
-                            <p><input type="text" name="code" placeholder="Coupon Code" style="width: 100%; padding: 10px; border-radius: 3px; border: 1px solid #ddd; margin-bottom: 10px;"></p>
-                            <p><button type="submit" style="background-color: #F28123; color: white; border: none; border-radius: 3px; padding: 10px 20px; font-weight: 600; width: 100%; cursor: pointer; transition: all 0.3s ease;">Apply Coupon</button></p>
+                            <div style="margin-bottom: 10px;">
+                                <input type="text" name="code" placeholder="Enter Coupon Code" required 
+                                       style="width: 100%; padding: 10px; border-radius: 3px; border: 1px solid #ddd;" 
+                                       value="{{ old('code') }}">
+                            </div>
+                            <div>
+                                <button type="submit" id="apply-coupon-btn"
+                                        style="background-color: #F28123; color: white; border: none; border-radius: 3px; padding: 10px 20px; font-weight: 600; width: 100%; cursor: pointer; transition: all 0.3s ease;">
+                                    Apply Coupon
+                                </button>
+                            </div>
                         </form>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
 <!-- end cart -->
+@endsection
+
+@section('scripts')
+<script src="{{ asset('assets/js/cart-operations.js') }}"></script>
 @endsection

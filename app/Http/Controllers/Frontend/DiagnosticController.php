@@ -28,9 +28,8 @@ class DiagnosticController extends Controller
                         ->get();
         
         $results = [];
-        
-        foreach ($products as $product) {
-            $inventory = $product->inventory->first();
+          foreach ($products as $product) {
+            $inventory = $product->inventory;
             $quantity = $inventory ? $inventory->quantity : null;
             
             $results[] = [
@@ -38,12 +37,11 @@ class DiagnosticController extends Controller
                 'product_name' => $product->name,
                 'raw_quantity' => $quantity,
                 'quantity_type' => gettype($quantity),
-                'quantity_as_int' => (int)$quantity,
-                'in_stock_via_attribute' => $product->in_stock,
+                'quantity_as_int' => (int)$quantity,                'in_stock_via_attribute' => $product->in_stock,
                 'stock_qty_via_attribute' => $product->stock_qty,
                 'manual_check' => ($quantity > 0) ? 'true' : 'false',
                 'inventory_id' => $inventory ? $inventory->id : null,
-                'inventory_count' => $product->inventory->count()
+                'inventory_exists' => $product->inventory ? 'true' : 'false'
             ];
         }
         

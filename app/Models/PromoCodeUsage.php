@@ -13,10 +13,12 @@ class PromoCodeUsage extends Model
         'user_id',
         'promo_code_id',
         'order_id',
+        'discount_amount',
         'used_at',
     ];
 
     protected $casts = [
+        'discount_amount' => 'decimal:2',
         'used_at' => 'datetime',
     ];
 

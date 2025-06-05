@@ -1,0 +1,212 @@
+/*
+ * Admin Login Page Styling
+ * Separate CSS file for login page specific styles
+ * Primary: #F28123 (Orange), Dark: #051922 (Navy)
+ */
+
+/* Login Page Background */
+.bg-login-image {
+    background: url('../img/logo1.png');
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Prevent scrolling on login page */
+html, body {
+    overflow-x: hidden;
+}
+
+body.bg-gradient-primary {
+    overflow: hidden !important;
+}
+
+body.bg-gradient-primary *, 
+body.bg-gradient-primary *::before, 
+body.bg-gradient-primary *::after {
+    box-sizing: border-box;
+}
+
+/* Center the admin login form */
+body.bg-gradient-primary {
+    min-height: 100vh;
+    max-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden;
+}
+
+body.bg-gradient-primary .container-fluid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    max-height: 100vh;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow: hidden;
+}
+
+/* Enhanced login card styling */
+.card.o-hidden.border-0.shadow-lg {
+    border: none !important;
+    box-shadow: 0 15px 35px rgba(50, 50, 93, 0.15), 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    max-width: 900px;
+    width: 900px;
+    margin: 0 !important;
+    border-radius: 15px !important;
+    background: var(--white) !important;
+    height: 500px;
+    overflow: hidden;
+}
+
+/* Remove white background from login form container */
+.row.justify-content-center.align-items-center.min-vh-100 {
+    width: 100% !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    max-width: none !important;
+}
+
+/* Remove any extra white backgrounds */
+.card-body {
+    background: transparent !important;
+}
+
+.card-body .row {
+    background: transparent !important;
+}
+
+/* Center the login form content vertically */
+.card-body .row .col-lg-6:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px;
+    height: 500px;
+}
+
+.card-body .row .col-lg-6:last-child .w-100 {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem !important;
+    height: 100%;
+}
+
+/* Remove padding from card body */
+.card-body {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+/* Remove padding from the main card */
+.card.o-hidden.border-0.shadow-lg .card-body {
+    padding: 0 !important;
+}
+
+/* Login form specific styling */
+.login-form {
+    max-width: 400px;
+    width: 100%;
+}
+
+.login-form .form-control {
+    border-radius: 10rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+}
+
+.login-form .btn-user {
+    border-radius: 10rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 0.75rem 1rem;
+    letter-spacing: 0.1rem;
+}
+
+.login-form .text-center h1 {
+    color: #5a5c69;
+    font-weight: 400;
+}
+
+/* Alert styling for login page */
+.login-form .alert {
+    border-radius: 10px;
+    border: none;
+    margin-bottom: 1rem;
+}
+
+.login-form .alert-danger {
+    background-color: rgba(231, 74, 59, 0.1);
+    color: #a71e2a;
+    border-left: 4px solid #e74a3b;
+}
+
+.login-form .alert-success {
+    background-color: rgba(28, 200, 138, 0.1);
+    color: #0e6b47;
+    border-left: 4px solid #1cc88a;
+}
+
+/* Form validation styling */
+.login-form .form-control.is-invalid {
+    border-color: #e74a3b;
+    box-shadow: 0 0 0 0.2rem rgba(231, 74, 59, 0.25);
+}
+
+.login-form .invalid-feedback {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card.o-hidden.border-0.shadow-lg {
+        width: 95% !important;
+        max-width: 95% !important;
+        height: auto !important;
+    }
+    
+    .bg-login-image {
+        display: none !important;
+    }
+    
+    .card-body .row .col-lg-6:last-child {
+        min-height: auto !important;
+        height: auto !important;
+        padding: 2rem 1rem !important;
+    }
+    
+    body.bg-gradient-primary {
+        padding: 1rem !important;
+        overflow-y: auto !important;
+    }
+    
+    body.bg-gradient-primary .container-fluid {
+        overflow-y: auto !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .login-form .w-100 {
+        padding: 1rem 0.5rem !important;
+    }
+    
+    .card.o-hidden.border-0.shadow-lg {
+        border-radius: 10px !important;
+    }
+}

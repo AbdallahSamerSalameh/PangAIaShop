@@ -30,13 +30,23 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 // Area Chart Example
 var ctx = document.getElementById("myAreaChart");
 
+// Debug: Check if canvas element exists
+if (!ctx) {
+    console.error('Canvas element "myAreaChart" not found!');
+} else {
+    console.log('Canvas element found:', ctx);
+}
+
 // Use real sales data if available, otherwise use default data
 var salesData = window.salesData || {
   labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   data: [0, 10000, 5000, 15000, 10000, 20000, 15000, 25000, 20000, 30000, 25000, 40000]
 };
 
-var myLineChart = new Chart(ctx, {
+console.log('Area Chart - Using sales data:', salesData);
+
+try {
+  var myLineChart = new Chart(ctx, {
   type: 'line',
   data: {
     labels: salesData.labels,
@@ -118,8 +128,13 @@ var myLineChart = new Chart(ctx, {
         label: function(tooltipItem, chart) {
           var datasetLabel = chart.datasets[tooltipItem.datasetIndex].label || '';
           return datasetLabel + ': $' + number_format(tooltipItem.yLabel);
-        }
-      }
+        }      }
     }
   }
 });
+
+console.log('Area chart created successfully');
+
+} catch (error) {
+    console.error('Error creating area chart:', error);
+}

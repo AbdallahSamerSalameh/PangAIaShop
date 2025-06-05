@@ -156,8 +156,7 @@ class AuthController extends Controller
     {
         return view('frontend.auth.forgot-password');
     }
-    
-    /**
+      /**
      * Handle a forgot password request.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -169,14 +168,25 @@ class AuthController extends Controller
             'email' => 'required|email|exists:users,email',
         ]);
         
+        // Find the user by email
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if (!$user) {
+            return back()->withErrors([
+                'email' => 'We could not find a user with that email address.',
+            ]);
+        }
+        
         // Generate a password reset token
         $token = \Illuminate\Support\Str::random(64);
         
         // Store the token in the password_reset_tokens table
         \App\Models\PasswordResetToken::create([
-            'email' => $request->email,
-            'token' => $token,
-            'created_at' => now(),
+            'user_id' => $user->id,
+            'token_hash' => hash('sha256', $token),
+            'request_ip' => $request->ip(),
+            'expires_at' => now()->addHour(),
+            'reset_type' => 'user',
         ]);
         
         // Send reset link email (implementation depends on your mailing setup)
@@ -269,22 +279,58 @@ class AuthController extends Controller
             
             // Check which form is being submitted
             $formType = $request->input('form_type', 'personal_info');
-            
-            if ($formType === 'personal_info') {
+              if ($formType === 'personal_info') {
                 // Validate personal info form
                 $request->validate([
                     'username' => 'required|string|max:255',
                     'email' => 'required|email|max:150|unique:users,email,' . $user->id,
                     'phone_number' => 'nullable|string|max:20',
-                    'avatar_url' => 'nullable|url|max:255',
+                    'avatar_url' => 'nullable|url|max:500',
+                    'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
                 ]);
+                  // Handle avatar - prioritize file upload over URL
+                if ($request->hasFile('avatar')) {
+                    // Delete old avatar if it exists and is stored locally
+                    if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+                        $oldAvatarPath = storage_path('app/public/' . $user->avatar_url);
+                        if (file_exists($oldAvatarPath)) {
+                            unlink($oldAvatarPath);
+                        }
+                    }
+                    
+                    // Store the new avatar file
+                    $avatarFile = $request->file('avatar');
+                    $avatarName = time() . '_' . $user->id . '.' . $avatarFile->getClientOriginalExtension();
+                    $avatarPath = $avatarFile->storeAs('avatars', $avatarName, 'public');
+                    
+                    $user->avatar_url = $avatarPath;
+                } elseif ($request->filled('avatar_url')) {
+                    // If no file uploaded but URL provided, delete old local avatar and use URL
+                    if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+                        $oldAvatarPath = storage_path('app/public/' . $user->avatar_url);
+                        if (file_exists($oldAvatarPath)) {
+                            unlink($oldAvatarPath);
+                        }
+                    }
+                    
+                    $user->avatar_url = $request->avatar_url;
+                } elseif ($request->has('avatar_url') && empty($request->avatar_url)) {
+                    // If avatar_url field is present but empty, clear the avatar
+                    if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+                        $oldAvatarPath = storage_path('app/public/' . $user->avatar_url);
+                        if (file_exists($oldAvatarPath)) {
+                            unlink($oldAvatarPath);
+                        }
+                    }
+                    
+                    $user->avatar_url = null;
+                }
                 
                 // Update personal info
                 $user->username = $request->username;
                 $user->email = $request->email;
                 $user->phone_number = $request->phone_number;
-                $user->avatar_url = $request->avatar_url;
-            } 
+            }
             elseif ($formType === 'shipping_address') {
                 // Validate shipping address form
                 $request->validate([
@@ -421,8 +467,7 @@ class AuthController extends Controller
             'email' => $request->email
         ]);
     }
-    
-    /**
+      /**
      * Reset the user's password.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -443,21 +488,24 @@ class AuthController extends Controller
             ],
         ]);
 
-        // Find the password reset token
-        $passwordReset = \App\Models\PasswordResetToken::where('token', $request->token)
-            ->where('email', $request->email)
-            ->where('created_at', '>', now()->subHours(1))
-            ->first();
-
-        if (!$passwordReset || $passwordReset->isUsed() || $passwordReset->isExpired()) {
-            return back()->withErrors(['email' => 'This password reset token is invalid or has expired.']);
-        }
-
-        // Find the user
+        // Find the user first
         $user = User::where('email', $request->email)->first();
         
         if (!$user) {
             return back()->withErrors(['email' => 'We could not find a user with that email address.']);
+        }
+
+        // Find the password reset token by user_id and hashed token
+        $tokenHash = hash('sha256', $request->token);
+        $passwordReset = \App\Models\PasswordResetToken::where('user_id', $user->id)
+            ->where('token_hash', $tokenHash)
+            ->where('reset_type', 'user')
+            ->where('expires_at', '>', now())
+            ->where('is_used', false)
+            ->first();
+
+        if (!$passwordReset || $passwordReset->isUsed() || $passwordReset->isExpired()) {
+            return back()->withErrors(['email' => 'This password reset token is invalid or has expired.']);
         }
 
         // Update the user's password
@@ -465,7 +513,8 @@ class AuthController extends Controller
         $user->last_password_change = now();
         $user->failed_login_count = 0;
         $user->save();
-          // Mark the token as used
+        
+        // Mark the token as used
         $passwordReset->markAsUsed();
         
         return redirect()->route('login')->with('status', 'Your password has been reset successfully!');

@@ -66,16 +66,26 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-primary">View</a>
-                                    @if(in_array($order->status, ['pending', 'processing']))                                    <button type="button" class="btn btn-sm" style="background-color: #dc3545; color: white;" data-toggle="modal" data-target="#cancelOrderModal{{ $order->id }}">Cancel</button>
-                                    
+                                    <a href="{{ route('orders.show', $order->id) }}"
+                                        class="btn btn-sm btn-primary">View</a>
+                                    @if(in_array($order->status, ['pending', 'processing'])) <button type="button"
+                                        class="btn btn-sm" style="background-color: #dc3545; color: white;"
+                                        data-toggle="modal"
+                                        data-target="#cancelOrderModal{{ $order->id }}">Cancel</button>
+
                                     <!-- Cancel Order Modal -->
-                                    <div class="modal fade" id="cancelOrderModal{{ $order->id }}" tabindex="-1" role="dialog" aria-labelledby="cancelOrderModalLabel{{ $order->id }}" aria-hidden="true">
+                                    <div class="modal fade" id="cancelOrderModal{{ $order->id }}" tabindex="-1"
+                                        role="dialog" aria-labelledby="cancelOrderModalLabel{{ $order->id }}"
+                                        aria-hidden="true">
                                         <div class="modal-dialog" role="document">
-                                            <div class="modal-content" style="border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
-                                                <div class="modal-header" style="background-color: #dc3545; color: white; border-bottom: none;">
-                                                    <h5 class="modal-title" id="cancelOrderModalLabel{{ $order->id }}">Cancel Order #{{ $order->order_number }}</h5>
-                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                                            <div class="modal-content"
+                                                style="border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                                                <div class="modal-header"
+                                                    style="background-color: #dc3545; color: white; border-bottom: none;">
+                                                    <h5 class="modal-title" id="cancelOrderModalLabel{{ $order->id }}">
+                                                        Cancel Order #{{ $order->order_number }}</h5>
+                                                    <button type="button" class="close" data-dismiss="modal"
+                                                        aria-label="Close" style="color: white;">
                                                         <span aria-hidden="true">&times;</span>
                                                     </button>
                                                 </div>
@@ -83,18 +93,28 @@
                                                     @csrf
                                                     <div class="modal-body" style="padding: 25px;">
                                                         <div class="text-center mb-4">
-                                                            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 15px;"></i>
+                                                            <i class="fas fa-exclamation-triangle"
+                                                                style="font-size: 48px; color: #dc3545; margin-bottom: 15px;"></i>
                                                             <h5>Are you sure you want to cancel this order?</h5>
                                                             <p class="text-muted">This action cannot be undone.</p>
                                                         </div>
                                                         <div class="form-group">
-                                                            <label for="reason{{ $order->id }}" style="font-weight: 600; color: #333;">Reason for cancellation (optional):</label>
-                                                            <textarea name="reason" id="reason{{ $order->id }}" class="form-control" rows="3" style="border-radius: 5px; border: 1px solid #ddd;"></textarea>
+                                                            <label for="reason{{ $order->id }}"
+                                                                style="font-weight: 600; color: #333;">Reason for
+                                                                cancellation (optional):</label>
+                                                            <textarea name="reason" id="reason{{ $order->id }}"
+                                                                class="form-control" rows="3"
+                                                                style="border-radius: 5px; border: 1px solid #ddd;"></textarea>
                                                         </div>
                                                     </div>
-                                                    <div class="modal-footer" style="border-top: none; padding: 15px 25px 25px; justify-content: center;">
-                                                        <button type="button" class="btn" style="background-color: #e0e0e0; color: #333; border-radius: 5px; padding: 8px 18px; font-weight: 600; margin: 0 5px;" data-dismiss="modal">Keep Order</button>
-                                                        <button type="submit" class="btn" style="background-color: #dc3545; color: white; border-radius: 5px; padding: 8px 18px; font-weight: 600; margin: 0 5px;">Yes, Cancel Order</button>
+                                                    <div class="modal-footer"
+                                                        style="border-top: none; padding: 15px 25px 25px; justify-content: center;">
+                                                        <button type="button" class="btn"
+                                                            style="background-color: #e0e0e0; color: #333; border-radius: 5px; padding: 8px 18px; font-weight: 600; margin: 0 5px;"
+                                                            data-dismiss="modal">Keep Order</button>
+                                                        <button type="submit" class="btn"
+                                                            style="background-color: #dc3545; color: white; border-radius: 5px; padding: 8px 18px; font-weight: 600; margin: 0 5px;">Yes,
+                                                            Cancel Order</button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -102,16 +122,15 @@
                                     </div>
                                     @endif
                                     @if(in_array($order->status, ['processing', 'shipped']))
-                                    <a href="{{ route('orders.track', $order->id) }}" class="btn btn-sm btn-info">Track</a>
+                                    <a href="{{ route('orders.track', $order->id) }}"
+                                        class="btn btn-sm btn-info">Track</a>
                                     @endif
                                 </td>
                             </tr>
                             @endforeach
                         </tbody>
-                    </table>
-                    
-                    <div class="pagination-wrap mt-5">
-                        {{ $orders->links() }}
+                    </table>                    <div class="pagination-wrap mt-5">
+                        {{ $orders->links('vendor.pagination.simple-tailwind') }}
                     </div>
                     @else
                     <div class="text-center">
@@ -137,11 +156,111 @@
         text-transform: uppercase;
         font-size: 12px;
     }
-    .badge-success { background-color: #28a745; color: white; }
-    .badge-info { background-color: #17a2b8; color: white; }
-    .badge-primary { background-color: #007bff; color: white; }
-    .badge-warning { background-color: #ffc107; color: #212529; }
-    .badge-danger { background-color: #dc3545; color: white; }
-    .badge-secondary { background-color: #6c757d; color: white; }
+
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .badge-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+    .badge-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    .badge-danger {
+        background-color: #dc3545;
+        color: white;
+    }    .badge-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    /* Pagination Styles */
+    .pagination-wrap {
+        margin-top: 40px;
+        text-align: center;
+    }
+
+    .custom-pagination {
+        display: inline-flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 50px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .page-btn {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 5px;
+        background-color: white;
+        color: #666;
+        border-radius: 50%;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        cursor: pointer;
+    }
+
+    .page-btn:hover {
+        background-color: #f5f5f5;
+        color: #f28123;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        text-decoration: none;
+    }
+
+    .page-btn.active {
+        background-color: #f28123;
+        color: white;
+    }
+
+    .page-btn.disabled {
+        background-color: #f5f5f5;
+        color: #aaa;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    .page-btn.disabled:hover {
+        transform: none;
+        background-color: #f5f5f5;
+        color: #aaa;
+    }
+
+    /* Make pagination responsive */
+    @media only screen and (max-width: 768px) {
+        .pagination-wrap {
+            margin-top: 20px;
+        }
+
+        .custom-pagination {
+            padding: 6px 10px;
+        }
+
+        .page-btn {
+            width: 32px;
+            height: 32px;
+            margin: 0 3px;
+            font-size: 12px;
+        }
+    }
+
+    
 </style>
 @endsection

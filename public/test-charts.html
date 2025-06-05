@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Test</title>
+    <style>
+        .chart-container {
+            width: 400px;
+            height: 300px;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chart.js Test</h1>
+    
+    <div class="chart-container">
+        <h3>Area Chart Test</h3>
+        <canvas id="testAreaChart" width="400" height="200"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h3>Pie Chart Test</h3>
+        <canvas id="testPieChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="admin-assets/vendor/chart.js/Chart.min.js"></script>
+    
+    <script>
+        // Test if Chart.js is loaded
+        console.log('Chart.js loaded:', typeof Chart !== 'undefined');
+        
+        // Test Area Chart
+        var areaCtx = document.getElementById('testAreaChart');
+        if (areaCtx) {
+            var testAreaChart = new Chart(areaCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Test Sales',
+                        data: [1000, 1500, 1200, 1800, 2000, 1700],
+                        backgroundColor: 'rgba(242, 129, 35, 0.1)',
+                        borderColor: '#F28123',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            console.log('Area chart created successfully');
+        } else {
+            console.error('Area chart canvas not found');
+        }
+        
+        // Test Pie Chart
+        var pieCtx = document.getElementById('testPieChart');
+        if (pieCtx) {
+            var testPieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Electronics', 'Clothing', 'Books', 'Other'],
+                    datasets: [{
+                        data: [40, 30, 20, 10],
+                        backgroundColor: ['#F28123', '#1cc88a', '#36b9cc', '#f6c23e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            console.log('Pie chart created successfully');
+        } else {
+            console.error('Pie chart canvas not found');
+        }
+    </script>
+</body>
+</html>

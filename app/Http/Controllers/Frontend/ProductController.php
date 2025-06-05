@@ -25,6 +25,7 @@ class ProductController extends Controller
             'images', 
             'categories', 
             'variants',
+            'inventory'
         ])->findOrFail($id);
         
         // Separately load explicitly approved reviews to ensure consistency        // Get all approved reviews for this product
@@ -52,23 +53,28 @@ class ProductController extends Controller
         // Get related products from the same categories
         $relatedProducts = collect();
         if ($product->categories->isNotEmpty()) {
-            $categoryIds = $product->categories->pluck('id');
-              $relatedProducts = Product::whereHas('categories', function($query) use ($categoryIds) {
+            $categoryIds = $product->categories->pluck('id');              $relatedProducts = Product::whereHas('categories', function($query) use ($categoryIds) {
                 $query->whereIn('categories.id', $categoryIds);
             })
             ->where('id', '!=', $product->id)
             ->where('status', 'active')
             ->with(['images' => function($query) {
                 $query->where('is_primary', true);
-            }, 'categories'])
+            }, 'categories', 'inventory'])
             ->take(4)
             ->get();
             
-            // Transform the collection to add featured image
+            // Transform the collection to add featured image and stock status
             $relatedProducts = $relatedProducts->map(function($related) {
                 $related->featured_image = $related->images->first() 
                     ? $related->images->first()->image_url 
                     : 'assets/img/products/product-img-1.jpg';
+                
+                // Set stock status attributes
+                $inventory = $related->inventory;
+                $quantity = $inventory ? intval($inventory->quantity) : 0;
+                $related->stock_qty = $quantity;
+                $related->in_stock = $quantity > 0;
                     
                 return $related;
             });
@@ -139,10 +145,18 @@ class ProductController extends Controller
                             ? $viewed->images->first()->image_url 
                             : 'assets/img/products/product-img-1.jpg';
                         
-                        return $viewed;
-                    });
+                        return $viewed;                    });
             }
-        }          return view('frontend.pages.single-product', [
+        }
+        
+        // Set inventory status attributes for the template
+        $inventory = $product->inventory;
+        $quantity = $inventory ? intval($inventory->quantity) : 0;
+        
+        // Set stock status attributes that the template expects
+        $product->stock_qty = $quantity;
+        $product->in_stock = $quantity > 0;
+          return view('frontend.pages.single-product', [
             'product' => $product,
             'relatedProducts' => $relatedProducts,
             'inWishlist' => $inWishlist,
@@ -179,17 +193,16 @@ class ProductController extends Controller
         $existingReview = Review::where('product_id', $product->id)
             ->where('user_id', $user->id)
             ->first();
-            
-        if ($existingReview) {
+              if ($existingReview) {
             // Update existing review
             $existingReview->update([
                 'rating' => $request->rating,
                 'comment' => $request->comment,
-                'moderation_status' => 'approved', // Auto-approve for this demo
+                'moderation_status' => 'pending', // Submit for admin approval
                 'created_at' => now(),
             ]);
             
-            $message = 'Your review has been updated.';
+            $message = 'Your review has been updated and is pending approval.';
         } else {
             // Create a new review
             Review::create([
@@ -197,11 +210,11 @@ class ProductController extends Controller
                 'user_id' => $user->id,
                 'rating' => $request->rating,
                 'comment' => $request->comment,
-                'moderation_status' => 'approved', // Auto-approve for this demo
+                'moderation_status' => 'pending', // Submit for admin approval
                 'created_at' => now(),
             ]);
             
-            $message = 'Thank you for your review!';
+            $message = 'Thank you for your review! It is pending approval and will be visible once approved.';
         }
         
         return redirect()->back()->with('success', $message);

@@ -548,9 +548,8 @@
             <div class="row">
                 <div class="col-lg-4">
                     <div class="profile-box">
-                        <div class="profile-header">
-                            <div class="profile-avatar">
-                                <img src="{{ $user->avatar_url ?? 'https://via.placeholder.com/200x200?text=User' }}"
+                        <div class="profile-header">                            <div class="profile-avatar">
+                                <img src="{{ $user->avatar_url ? (str_starts_with($user->avatar_url, 'http') ? $user->avatar_url : asset('storage/' . $user->avatar_url)) : 'https://via.placeholder.com/200x200?text=User' }}"
                                     alt="Profile Picture">
                             </div>
                             <div class="profile-info">
@@ -561,7 +560,7 @@
                             <a href="#profile-info" class="tab-link active">Profile</a>
                             <a href="#orders" class="tab-link">Orders</a>
                             <a href="#wishlist" class="tab-link">Wishlist</a>
-                            <a href="#cart" class="tab-link">Cart</a>
+                            {{-- <a href="#cart" class="tab-link">Cart</a> --}}
                             <a href="#settings" class="tab-link">Settings</a>
                         </div>
                         <div class="mt-4 text-center">
@@ -576,55 +575,81 @@
                 <div class="col-lg-8">
                     <div class="profile-box tab-content active" id="profile-info">
                         <div class="profile-section">
-                            <h4>Personal Information</h4>
-                            <form action="{{ route('profile.update') }}" method="POST" class="profile-form">
+                            <h4>Personal Information</h4>                            <form action="{{ route('profile.update') }}" method="POST" class="profile-form" enctype="multipart/form-data">
                                 @csrf
                                 @method('PATCH')
-                                <input type="hidden" name="form_type" value="personal_info">
-
-                                @if (
-                                    $errors->any() &&
-                                        !$errors->has('street') &&
-                                        !$errors->has('city') &&
-                                        !$errors->has('state') &&
-                                        !$errors->has('postal_code') &&
-                                        !$errors->has('country'))
+                                <input type="hidden" name="form_type" value="personal_info">                                @if ($errors->any() && 
+                                    ($errors->has('username') || 
+                                     $errors->has('email') || 
+                                     $errors->has('phone_number') || 
+                                     $errors->has('avatar')))
                                     <div class="alert alert-danger">
                                         <ul class="mb-0">
-                                            @foreach ($errors->all() as $error)
-                                                <li>{{ $error }}</li>
-                                            @endforeach
+                                            @if ($errors->has('username'))
+                                                <li>{{ $errors->first('username') }}</li>
+                                            @endif
+                                            @if ($errors->has('email'))
+                                                <li>{{ $errors->first('email') }}</li>
+                                            @endif
+                                            @if ($errors->has('phone_number'))
+                                                <li>{{ $errors->first('phone_number') }}</li>
+                                            @endif
+                                            @if ($errors->has('avatar'))
+                                                <li>{{ $errors->first('avatar') }}</li>
+                                            @endif
                                         </ul>
                                     </div>
-                                @endif
-
-                                <div class="row">
+                                @endif<div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="username">Username</label>
                                             <input type="text" id="username" name="username"
-                                                value="{{ $user->username }}" required>
+                                                value="{{ old('username', $user->username) }}" required>
+                                            @error('username')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="email">Email</label>
-                                            <input type="email" id="email" name="email" value="{{ $user->email }}"
+                                            <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}"
                                                 required>
+                                            @error('email')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
+                                    </div>                                    <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="phone">Phone Number</label>
                                             <input type="text" id="phone" name="phone_number"
-                                                value="{{ $user->phone_number }}">
+                                                value="{{ old('phone_number', $user->phone_number) }}">
+                                            @error('phone_number')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="avatar_url">Avatar URL</label>
                                             <input type="url" id="avatar_url" name="avatar_url"
-                                                value="{{ $user->avatar_url }}">
+                                                value="{{ old('avatar_url', $user->avatar_url) }}" 
+                                                placeholder="Enter image URL (optional)">
+                                            @error('avatar_url')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="avatar">Or Upload Profile Picture</label>
+                                            <input type="file" id="avatar" name="avatar" accept="image/*">
+                                            @error('avatar')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
+                                            @if($user->avatar_url)
+                                                <small class="form-text text-muted">Current: <a href="{{ str_starts_with($user->avatar_url, 'http') ? $user->avatar_url : asset('storage/' . $user->avatar_url) }}" target="_blank">View current image</a></small>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -801,14 +826,10 @@
                                                     <div class="product-image">
                                                         <a href="{{ route('product.show', $item->product->id) }}">                                                            <img src="{{ $item->product->featured_image }}"
                                                                 alt="{{ $item->product->name }}"
-                                                                onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                                            @php
+                                                                onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">                                                            @php
                                                                 $inStock = true;
-                                                                if (
-                                                                    $item->product->inventory &&
-                                                                    $item->product->inventory->count() > 0
-                                                                ) {
-                                                                    $productInventory = $item->product->inventory->first();
+                                                                if ($item->product->inventory) {
+                                                                    $productInventory = $item->product->inventory;
                                                                     $inStock = $productInventory->quantity > 0;
                                                                 } else {
                                                                     $inStock = false;
@@ -891,14 +912,25 @@
                                 <a href="{{ route('cart') }}" class="btn-orange">Go to Cart Page</a>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="profile-box tab-content" id="settings">
+                    </div>                    <div class="profile-box tab-content" id="settings">
                         <div class="profile-section">
                             <h4>Change Password</h4>
-                            <form action="{{ route('password.update') }}" method="POST" class="profile-form">
+                            <form action="{{ route('password.change.update') }}" method="POST" class="profile-form">
                                 @csrf
                                 @method('PATCH')
+
+                                @if ($errors->any() && 
+                                    ($errors->has('current_password') || 
+                                     $errors->has('password') || 
+                                     $errors->has('password_confirmation')))
+                                    <div class="alert alert-danger">
+                                        <ul class="mb-0">
+                                            @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
 
                                 <div class="row">
                                     <div class="col-md-12">
@@ -906,12 +938,18 @@
                                             <label for="current_password">Current Password</label>
                                             <input type="password" id="current_password" name="current_password"
                                                 required>
+                                            @error('current_password')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="password">New Password</label>
                                             <input type="password" id="password" name="password" required>
+                                            @error('password')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -919,6 +957,9 @@
                                             <label for="password_confirmation">Confirm New Password</label>
                                             <input type="password" id="password_confirmation"
                                                 name="password_confirmation" required>
+                                            @error('password_confirmation')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -929,7 +970,7 @@
                         </div>
                     </div>
 
-                    {{-- @if (config('app.debug'))
+                    @if (config('app.debug'))
                     <div class="profile-section">
                         <h4>Debug Information</h4>
                         <div class="card">
@@ -949,7 +990,7 @@
                             </div>
                         </div>
                     </div>
-                @endif --}}
+                @endif
                 </div>
             </div>
         </div>

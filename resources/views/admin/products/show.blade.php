@@ -30,106 +30,46 @@
                     <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="productActions">
                         <a class="dropdown-item" href="{{ route('admin.products.edit', $product->id) }}">
                             <i class="fas fa-edit fa-sm mr-2 text-gray-400"></i> Edit
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline">
+                        </a>                        <div class="dropdown-divider"></div>
+                        <form id="delete-form-{{ $product->id }}" action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to delete this product?')">
-                                <i class="fas fa-trash fa-sm mr-2 text-danger"></i> Delete
-                            </button>
-                        </form>
+                        </form>                        <button type="button" class="dropdown-item text-danger" onclick="showDeleteModal({{ $product->id }}, '{{ addslashes($product->name) }}', 'product')">
+                            <i class="fas fa-trash fa-sm mr-2 text-danger"></i> Delete
+                        </button>
                     </div>
                 </div>
             </div>            <div class="card-body">                <div class="row">
                     <div class="col-md-12 mb-4">
-                        @if($product->images && $product->images->where('is_primary', true)->first())
                         @php
-                            $primaryImage = $product->images->where('is_primary', true)->first();
-                            $imageUrl = str_starts_with($primaryImage->image_url, 'http') 
-                                ? $primaryImage->image_url 
-                                : asset('storage/' . $primaryImage->image_url);
+                            // Get product image
+                            $productImage = null;
+                            $categoryFallback = null;
                             
-                            // Get category fallback image
-                            $categoryImageUrl = '';
-                            if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                $categoryImage = $product->directCategories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
-                            } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                $categoryImage = $product->categories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
-                            } else {
-                                $categoryImageUrl = asset('admin-assets/img/undraw_posting_photo.svg');
-                            }                        @endphp
-                        <div class="product-image-container rounded overflow-hidden bg-light d-flex align-items-center justify-content-center mx-auto" style="max-width: 400px; height: 280px;">
-                            <img src="{{ $imageUrl }}" 
-                                alt="{{ $product->name }}" 
-                                class="img-fluid"
-                                style="max-width: 100%; max-height: 100%; object-fit: cover; object-position: center;"
-                                onerror="if(this.src !== '{{ $categoryImageUrl }}') { this.src='{{ $categoryImageUrl }}'; } else { this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null; }"
-                                loading="lazy">
-                        </div>                        @elseif($product->images && $product->images->count() > 0)                        @php
-                            $firstImage = $product->images->first();
-                            $imageUrl = str_starts_with($firstImage->image_url, 'http') 
-                                ? $firstImage->image_url 
-                                : asset('storage/' . $firstImage->image_url);
+                            // Get primary or first product image
+                            if($product->images && $product->images->count() > 0) {
+                                $primaryImage = $product->images->where('is_primary', true)->first();
+                                $productImage = $primaryImage ? $primaryImage->image_url : $product->images->first()->image_url;
+                            }
                             
-                            // Get category fallback image
-                            $categoryImageUrl = '';
+                            // Get category fallback
                             if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                $categoryImage = $product->directCategories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
+                                $categoryFallback = $product->directCategories->first()->image_url;
                             } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                $categoryImage = $product->categories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
-                            } else {
-                                $categoryImageUrl = asset('admin-assets/img/undraw_posting_photo.svg');
-                            }                        @endphp
+                                $categoryFallback = $product->categories->first()->image_url;
+                            }
+                        @endphp
+                        
                         <div class="product-image-container rounded overflow-hidden bg-light d-flex align-items-center justify-content-center mx-auto" style="max-width: 400px; height: 280px;">
-                            <img src="{{ $imageUrl }}" 
-                                alt="{{ $product->name }}" 
-                                class="img-fluid"
-                                style="max-width: 100%; max-height: 100%; object-fit: cover; object-position: center;"
-                                onerror="if(this.src !== '{{ $categoryImageUrl }}') { this.src='{{ $categoryImageUrl }}'; } else { this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null; }"
-                                loading="lazy">
+                            @include('admin.components.image-with-fallback', [
+                                'src' => $productImage,
+                                'alt' => $product->name,
+                                'type' => 'product',
+                                'fallbacks' => [$categoryFallback],
+                                'class' => 'img-fluid',
+                                'style' => 'max-width: 100%; max-height: 100%; object-fit: cover; object-position: center;'
+                            ])
                         </div>
-                        @else
-                        @php
-                            // No product image, use category image directly
-                            $categoryImageUrl = '';
-                            if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                $categoryImage = $product->directCategories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
-                            } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                $categoryImage = $product->categories->first()->image_url;
-                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                    ? $categoryImage 
-                                    : asset('storage/' . $categoryImage);
-                            }                        @endphp                        @if($categoryImageUrl)
-                        <div class="product-image-container rounded overflow-hidden bg-light d-flex align-items-center justify-content-center mx-auto" style="max-width: 400px; height: 280px;">
-                            <img src="{{ $categoryImageUrl }}" 
-                                alt="{{ $product->name }}" 
-                                class="img-fluid"
-                                style="max-width: 100%; max-height: 100%; object-fit: cover; object-position: center;"
-                                onerror="this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null;"
-                                loading="lazy">
-                        </div>
-                        @else
-                        <div class="product-image-container bg-light d-flex align-items-center justify-content-center rounded mx-auto" style="max-width: 400px; height: 280px;">
-                            <i class="fas fa-image fa-3x text-muted"></i>
-                        </div>
-                        @endif
-                        @endif
                     </div>
                     
                     <div class="col-md-12">
@@ -148,11 +88,18 @@
                                             <p class="mb-0">
                                                 <span class="h4">${{ number_format($product->price, 2) }}</span>
                                             </p>
-                                        @endif
-                                        
-                                        <div class="mt-3">
-                                            @if($product->in_stock)
-                                                <span class="badge badge-success">In Stock</span>
+                                        @endif                                        <div class="mt-3">
+                                            @if($product->inventory)
+                                                @php
+                                                    $stockQuantity = (int)$product->inventory->quantity;
+                                                @endphp
+                                                @if($stockQuantity > 10)
+                                                    <span class="badge badge-success">In Stock</span>
+                                                @elseif($stockQuantity > 0)
+                                                    <span class="badge badge-warning">Low Stock</span>
+                                                @else
+                                                    <span class="badge badge-danger">Out of Stock</span>
+                                                @endif
                                             @else
                                                 <span class="badge badge-danger">Out of Stock</span>
                                             @endif
@@ -168,14 +115,16 @@
                             <div class="col-md-6 mb-3">
                                 <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h6 class="font-weight-bold">Inventory</h6>
-                                        <p class="mb-1">
+                                        <h6 class="font-weight-bold">Inventory</h6>                                        <p class="mb-1">
                                             <strong>Quantity:</strong> 
                                             @if($product->inventory)
-                                                @if($product->inventory->quantity > 10)
-                                                    <span class="text-success">{{ $product->inventory->quantity }}</span>
-                                                @elseif($product->inventory->quantity > 0)
-                                                    <span class="text-warning">{{ $product->inventory->quantity }} (Low Stock)</span>
+                                                @php
+                                                    $quantity = (int)$product->inventory->quantity;
+                                                @endphp
+                                                @if($quantity > 10)
+                                                    <span class="text-success">{{ $quantity }}</span>
+                                                @elseif($quantity > 0)
+                                                    <span class="text-warning">{{ $quantity }} (Low Stock)</span>
                                                 @else
                                                     <span class="text-danger">0 (Out of Stock)</span>
                                                 @endif
@@ -228,35 +177,26 @@
             </div>
             <div class="card-body">                <div class="row">
                     @if($product->images->count() > 0)
-                        @foreach($product->images as $image)                            <div class="col-md-6 mb-3">
+                        @foreach($product->images as $image)
+                            <div class="col-md-6 mb-3">
                                 @php
-                                    $galleryImageUrl = str_starts_with($image->image_url, 'http') 
-                                        ? $image->image_url 
-                                        : asset('storage/' . $image->image_url);
-                                    
                                     // Get category fallback for gallery images
-                                    $galleryCategoryFallback = '';
+                                    $galleryCategoryFallback = null;
                                     if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                        $categoryImage = $product->directCategories->first()->image_url;
-                                        $galleryCategoryFallback = str_starts_with($categoryImage, 'http') 
-                                            ? $categoryImage 
-                                            : asset('storage/' . $categoryImage);
+                                        $galleryCategoryFallback = $product->directCategories->first()->image_url;
                                     } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                        $categoryImage = $product->categories->first()->image_url;
-                                        $galleryCategoryFallback = str_starts_with($categoryImage, 'http') 
-                                            ? $categoryImage 
-                                            : asset('storage/' . $categoryImage);
-                                    } else {
-                                        $galleryCategoryFallback = asset('admin-assets/img/undraw_posting_photo.svg');
+                                        $galleryCategoryFallback = $product->categories->first()->image_url;
                                     }
                                 @endphp
                                 <div class="position-relative">
-                                    <img src="{{ $galleryImageUrl }}" 
-                                        alt="{{ $product->name }}" 
-                                        class="img-thumbnail w-100"
-                                        style="height: 120px; object-fit: cover;"
-                                        onerror="if(this.src !== '{{ $galleryCategoryFallback }}') { this.src='{{ $galleryCategoryFallback }}'; } else { this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null; }"
-                                        loading="lazy">
+                                    @include('admin.components.image-with-fallback', [
+                                        'src' => $image->image_url,
+                                        'alt' => $product->name,
+                                        'type' => 'product',
+                                        'fallbacks' => [$galleryCategoryFallback],
+                                        'class' => 'img-thumbnail w-100',
+                                        'style' => 'height: 120px; object-fit: cover;'
+                                    ])
                                     @if($image->is_primary)
                                         <span class="badge badge-primary position-absolute" style="top: 5px; right: 5px;">Main</span>
                                     @endif
@@ -272,9 +212,8 @@
                             </div>
                         </div>
                     @endif
-                </div>
-            </div>
-        </div>
+                </div>            </div>        </div>
     </div>
 </div>
+
 @endsection

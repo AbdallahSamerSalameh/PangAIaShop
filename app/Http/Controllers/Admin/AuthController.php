@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\AuditLoggable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,8 @@ use App\Models\AdminAuditLog;
 
 class AuthController extends Controller
 {
+    use AuditLoggable;
+    
     /**
      * Test method to check if the controller is accessible
      */
@@ -26,12 +29,24 @@ class AuthController extends Controller
      */
     public function showLogin()
     {
+        // Log login page access (for security monitoring)
+        try {
+            $this->logCustomAction(
+                'access_login_page',
+                null,
+                'Admin login page was accessed from ' . request()->ip()
+            );
+        } catch (\Exception $e) {
+            // Silently handle if audit logging fails on login page
+        }
+        
         return view('admin.auth.login');
     }
 
     /**
      * Handle admin login
-     */    public function login(Request $request)
+     */
+    public function login(Request $request)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -45,19 +60,22 @@ class AuthController extends Controller
             'is_active' => true
         ], $request->boolean('remember'))) {
             
-            $admin = Auth::guard('admin')->user();              // Log the successful login
-            AdminAuditLog::create([
-                'admin_id' => $admin->id,
-                'action' => 'login',
-                'resource' => 'auth',
-                'resource_id' => $admin->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent()
-            ]);// Update last login timestamp
+            $admin = Admin::find(Auth::guard('admin')->id());
+            
+            // Log the successful login using AuditLoggable trait
+            $this->logCustomAction(
+                'successful_login',
+                $admin,
+                'Admin logged in successfully from ' . $request->ip()
+            );
+            
+            // Update last login timestamp
             Admin::where('id', $admin->id)->update([
                 'last_login' => now(),
                 'failed_login_count' => 0
-            ]);            $request->session()->regenerate();
+            ]);
+            
+            $request->session()->regenerate();
             
             // Get the intended URL or default to admin dashboard
             $redirectTo = $request->session()->has('url.intended') 
@@ -72,56 +90,58 @@ class AuthController extends Controller
         
         if ($admin) {
             // Increment failed login count
-            $admin->increment('failed_login_count');              // Log the failed login attempt
-            AdminAuditLog::create([
-                'admin_id' => $admin->id,
-                'action' => 'failed_login',
-                'resource' => 'auth',
-                'resource_id' => $admin->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent()
-            ]);// If too many failed attempts, lock the account
+            $admin->increment('failed_login_count');
+            
+            // Log the failed login attempt using AuditLoggable trait
+            $this->logCustomAction(
+                'failed_login_attempt',
+                $admin,
+                'Failed login attempt for ' . $admin->email . ' from ' . $request->ip()
+            );
+            
+            // If too many failed attempts, lock the account
             if ($admin->failed_login_count >= 5 && $admin->is_active) {
                 Admin::where('id', $admin->id)->update([
                     'is_active' => false
                 ]);
-                  AdminAuditLog::create([
-                    'admin_id' => $admin->id,
-                    'action' => 'account_locked',
-                    'resource' => 'auth',
-                    'resource_id' => $admin->id,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent()
-                ]);
+                
+                // Log account lock using AuditLoggable trait
+                $this->logCustomAction(
+                    'account_locked',
+                    $admin,
+                    'Admin account locked due to excessive failed login attempts from ' . $request->ip()
+                );
                 
                 return back()->withErrors([
                     'email' => 'This account has been locked due to too many failed login attempts. Please contact a super admin.',
                 ]);
             }
-        }        return back()->withErrors([
+        }
+        
+        return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->onlyInput('email')->with('error', 'Login failed. Please check your credentials.');
     }
-
+    
     /**
      * Handle admin logout
      */
     public function logout(Request $request)
     {
-        $admin = Auth::guard('admin')->user();
-          // Log the logout action
-        if ($admin) {            AdminAuditLog::create([
-                'admin_id' => $admin->id,
-                'action' => 'logout',
-                'resource' => 'auth',
-                'resource_id' => $admin->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent()
-            ]);
+        $adminId = Auth::guard('admin')->id();
+        $admin = $adminId ? Admin::find($adminId) : null;
+        
+        // Log the logout action using AuditLoggable trait
+        if ($admin) {
+            $this->logCustomAction(
+                'logout',
+                $admin,
+                'Admin logged out from ' . $request->ip()
+            );
         }
         
         Auth::guard('admin')->logout();
-          $request->session()->invalidate();
+        $request->session()->invalidate();
         $request->session()->regenerateToken();
         
         return redirect('/admin/login');
@@ -132,6 +152,17 @@ class AuthController extends Controller
      */
     public function showForgotPassword()
     {
+        // Log forgot password page access
+        try {
+            $this->logCustomAction(
+                'access_forgot_password_page',
+                null,
+                'Forgot password page accessed from ' . request()->ip()
+            );
+        } catch (\Exception $e) {
+            // Silently handle if audit logging fails
+        }
+        
         return view('admin.auth.forgot-password');
     }
 
@@ -142,12 +173,33 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => ['required', 'email']
-        ]);        $admin = Admin::where('email', $request->email)->first();
+        ]);
+        
+        $admin = Admin::where('email', $request->email)->first();
         
         if (!$admin) {
+            // Log invalid email attempt
+            try {
+                $this->logCustomAction(
+                    'forgot_password_invalid_email',
+                    null,
+                    'Forgot password attempted with invalid email: ' . $request->email . ' from ' . $request->ip()
+                );
+            } catch (\Exception $e) {
+                // Silently handle audit logging error
+            }
+            
             return back()->withErrors([
                 'email' => 'We could not find an admin account with that email address.',
-            ]);        }
+            ]);
+        }
+        
+        // Log forgot password request
+        $this->logCustomAction(
+            'forgot_password_request',
+            $admin,
+            'Password reset requested for ' . $admin->email . ' from ' . $request->ip()
+        );
         
         // Generate a random token
         $token = hash('sha256', Str::random(60));
@@ -192,7 +244,8 @@ class AuthController extends Controller
         $admin = Admin::where('email', $request->email)->first();
         
         if (!$admin) {
-            return back()->withErrors(['email' => 'We could not find an admin with that email address.']);        }
+            return back()->withErrors(['email' => 'We could not find an admin with that email address.']);
+        }
         
         // Check if the token exists and is valid
         $tokenRecord = \Illuminate\Support\Facades\DB::table('admin_password_reset_tokens')
@@ -207,19 +260,20 @@ class AuthController extends Controller
         // Verify the token matches
         if (!Hash::check($request->token, $tokenRecord->token)) {
             return back()->withErrors(['token' => 'This password reset token is invalid.']);
-        }        // Reset the password
+        }
+        
+        // Reset the password
         Admin::where('id', $admin->id)->update([
             'password_hash' => Hash::make($request->password),
             'last_password_change' => now()
-        ]);        // Log the password reset
-        AdminAuditLog::create([
-            'admin_id' => $admin->id,
-            'action' => 'password_reset',
-            'resource' => 'auth',
-            'resource_id' => $admin->id,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent()
         ]);
+        
+        // Log the password reset using AuditLoggable trait
+        $this->logCustomAction(
+            'password_reset_completed',
+            $admin,
+            'Admin password was reset successfully from ' . $request->ip()
+        );
         
         // Delete the token
         \Illuminate\Support\Facades\DB::table('admin_password_reset_tokens')

@@ -5,13 +5,23 @@ Chart.defaults.global.defaultFontColor = '#858796';
 // Pie Chart Example
 var ctx = document.getElementById("myPieChart");
 
+// Debug: Check if canvas element exists
+if (!ctx) {
+    console.error('Canvas element "myPieChart" not found!');
+} else {
+    console.log('Canvas element found:', ctx);
+}
+
 // Use real category data if available, otherwise use default data
 var categoryData = window.categoryData || {
   labels: ["Clothing", "Accessories", "Footwear", "Other"],
   data: [45, 25, 15, 15]
 };
 
-var myPieChart = new Chart(ctx, {
+console.log('Pie Chart - Using category data:', categoryData);
+
+try {
+  var myPieChart = new Chart(ctx, {
   type: 'doughnut',
   data: {
     labels: categoryData.labels.map(label => label.charAt(0).toUpperCase() + label.slice(1)),    datasets: [{
@@ -37,11 +47,16 @@ var myPieChart = new Chart(ctx, {
           var value = chart.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
           return datasetLabel + ': ' + value + '%';
         }
-      }
-    },
+      }    },
     legend: {
       display: false
     },
     cutoutPercentage: 80,
   },
 });
+
+console.log('Pie chart created successfully');
+
+} catch (error) {
+    console.error('Error creating pie chart:', error);
+}

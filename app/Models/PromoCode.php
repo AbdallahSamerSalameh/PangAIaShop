@@ -18,6 +18,7 @@ class PromoCode extends Model
         'discount_type',
         'discount_value',
         'min_order_amount',
+        'max_discount_amount',
         'max_uses',
         'target_audience',
         'valid_from',
@@ -30,6 +31,7 @@ class PromoCode extends Model
     protected $casts = [
         'discount_value' => 'decimal:2',
         'min_order_amount' => 'decimal:2',
+        'max_discount_amount' => 'decimal:2',
         'max_uses' => 'integer',
         'target_audience' => 'array',
         'valid_from' => 'datetime',
@@ -77,32 +79,21 @@ class PromoCode extends Model
     }
     
     /**
-     * Calculate discount amount based on subtotal with maximum cap of $100
+     * Calculate discount amount based on subtotal with configurable maximum cap
      */
     public function calculateDiscount($subtotal)
     {
         $discount = 0;
-        $maxDiscountCap = 100.00; // Hard cap at $100
         
         if ($this->discount_type === 'percentage') {
             $discount = $subtotal * ($this->discount_value / 100);
-            
-            // Apply $100 cap
-            if ($discount > $maxDiscountCap) {
-                $discount = $maxDiscountCap;
-            }
         } else { // Fixed amount
             $discount = $this->discount_value;
-            
-            // Apply $100 cap
-            if ($discount > $maxDiscountCap) {
-                $discount = $maxDiscountCap;
-            }
         }
         
-        // Apply the $100 cap
-        if ($discount > $maxDiscountCap) {
-            $discount = $maxDiscountCap;
+        // Apply maximum discount cap if set
+        if ($this->max_discount_amount && $discount > $this->max_discount_amount) {
+            $discount = $this->max_discount_amount;
         }
         
         // Discount should not exceed the subtotal

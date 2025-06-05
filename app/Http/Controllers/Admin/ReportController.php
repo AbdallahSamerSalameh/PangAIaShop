@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\AuditLoggable;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    /**
+    use AuditLoggable;
+      /**
      * Display sales reports.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -23,6 +25,8 @@ class ReportController extends Controller
         $period = $request->input('period', 'monthly');
         $startDate = $request->input('start_date', Carbon::now()->subMonths(6)->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
+          // Log the report access
+        $this->logCustomAction("view_sales_report", null, "Accessed sales report (period: {$period}, from: {$startDate} to: {$endDate})");
         
         $salesData = $this->getSalesData($period, $startDate, $endDate);
         $topProducts = $this->getTopSellingProducts($startDate, $endDate);
@@ -39,8 +43,7 @@ class ReportController extends Controller
             'paymentMethods'
         ));
     }
-    
-    /**
+      /**
      * Display inventory reports.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -49,6 +52,9 @@ class ReportController extends Controller
     public function inventory(Request $request)
     {
         $stockStatus = $request->input('stock_status', 'all');
+        
+        // Log the report access
+        $this->logCustomAction("view_inventory_report", null, "Accessed inventory report (stock status filter: {$stockStatus})");
         
         $inventoryData = Product::with('inventory', 'category')
             ->when($stockStatus === 'in_stock', function ($query) {
@@ -84,8 +90,7 @@ class ReportController extends Controller
         
         return view('admin.reports.inventory', compact('inventoryData', 'stockByCategory', 'stockStatus'));
     }
-    
-    /**
+      /**
      * Display customer reports.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -95,6 +100,9 @@ class ReportController extends Controller
     {
         $startDate = $request->input('start_date', Carbon::now()->subMonths(3)->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
+        
+        // Log the report access
+        $this->logCustomAction("view_customer_report", null, "Accessed customer report (from: {$startDate} to: {$endDate})");
         
         $topCustomers = User::withCount(['orders as total_orders' => function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('created_at', [$startDate, $endDate]);

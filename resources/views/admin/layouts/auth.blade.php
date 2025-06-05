@@ -8,10 +8,10 @@
     <meta name="author" content="PangAIa Shop">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
-    
-    <!-- Favicon -->
+      <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
 
     <title>@yield('title', 'Admin Login') - {{ config('app.name', 'PangAIa Shop') }}</title>
 
@@ -19,16 +19,18 @@
     <link href="{{ asset('admin-assets/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">    <!-- Custom styles for this template-->
     <link href="{{ asset('admin-assets/css/sb-admin-2.min.css') }}" rel="stylesheet">
-    
-    <!-- Custom admin styling to match public site branding -->
+      <!-- Custom admin styling to match public site branding -->
     <link href="{{ asset('admin-assets/css/admin-custom.css') }}" rel="stylesheet">
+    
+    <!-- Login page specific styling -->
+    <link href="{{ asset('admin-assets/css/login.css') }}" rel="stylesheet">
 
     @stack('styles')
 </head>
 
 <body class="bg-gradient-primary">
 
-    <div class="container">
+    <div class="container-fluid d-flex align-items-center justify-content-center min-vh-100">
 
         @yield('content')
 

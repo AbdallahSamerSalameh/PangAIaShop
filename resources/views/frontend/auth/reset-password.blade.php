@@ -107,7 +107,7 @@
                         </div>
                     @endif
                     
-                    <form action="{{ route('password.update') }}" method="POST" class="auth-form">
+                    <form action="{{ route('password.reset.update') }}" method="POST" class="auth-form">
                         @csrf
                         <input type="hidden" name="token" value="{{ $token }}">
                         <input type="hidden" name="email" value="{{ $email }}">

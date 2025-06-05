@@ -67,10 +67,11 @@ class GuestCartController extends Controller
             $validated['quantity'],
             $validated['variant_id'] ?? null
         );
-        
-        if ($request->expectsJson()) {
+          if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Product added to cart',
+                'success' => true,
+                'message' => 'Product added to cart successfully',
+                'cart_count' => count($this->guestCartService->getCart()),
                 'cart' => $this->guestCartService->getCart()
             ]);
         }

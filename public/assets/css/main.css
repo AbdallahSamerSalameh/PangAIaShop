@@ -981,10 +981,10 @@ h2.widget-title:after {
 
 .footer-box.pages ul li {
   position: relative;
-  padding-left: 20px;
+  padding-left: 15px;
 }
 
-.footer-box.pages ul li:before {
+/* .footer-box.pages ul li:before {
   position: absolute;
   left: 0;
   top: 0;
@@ -992,7 +992,7 @@ h2.widget-title:after {
   font-family: "Font Awesome 5 Free";
   font-weight: 900;
   color: #F28123;
-}
+} */
 
 /* -----------------------------------------------------------------------------
 

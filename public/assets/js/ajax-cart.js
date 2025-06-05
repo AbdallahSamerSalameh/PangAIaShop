@@ -164,8 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Create form data from the form
             const formData = new FormData(form);
-            
-            // Send AJAX request
+              // Send AJAX request
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -173,11 +172,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is not ok (includes authentication errors)
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw { status: response.status, data: data };
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 // Remove loading spinner
                 submitButton.removeChild(loadingSpinner);
-                submitButton.disabled = false;                if (data.success) {
+                submitButton.disabled = false;
+
+                if (data.success) {
                     // Get the cart sound element
                     const cartSound = document.getElementById('cart-success-sound');
                     
@@ -197,51 +206,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Show success message immediately
-                    showToast(`${data.message || 'Product added to cart!'}`, 'cart-toast');                    // Update cart count indicator (in all headers across the site) - FIXED for immediate update
-                    // Calculate new count if provided by the server
+                    showToast(`${data.message || 'Product added to cart!'}`, 'cart-toast');                    // Update cart count indicator (in all headers across the site) - OPTIMIZED for instant update
+                    // Prioritize server response for most accurate count
                     let newCount = data.cart_count || data.cartCount;
                     
-                    // If no count is provided by the server, calculate it ourselves
+                    // If server didn't provide count, calculate quickly
                     if (newCount === undefined || newCount === null) {
-                        // Try to get count from cart data if available
-                        if (data.cart && data.cart.items) {
-                            newCount = 0;
-                            // Sum up quantities from cart items
-                            data.cart.items.forEach(item => {
-                                newCount += parseInt(item.quantity, 10) || 0;
-                            });
-                        } else {
-                            // Fall back to incrementing the current count
-                            const countIndicators = document.querySelectorAll('.cart-count');
-                            let currentCount = 0;
-                            
-                            // Find first visible indicator with a value
-                            for (let i = 0; i < countIndicators.length; i++) {
-                                if (countIndicators[i].style.display !== 'none') {
-                                    currentCount = parseInt(countIndicators[i].textContent, 10) || 0;
-                                    break;
-                                }
+                        // Get current count from any visible indicator
+                        const countIndicators = document.querySelectorAll('.cart-count');
+                        let currentCount = 0;
+                        
+                        // Find first visible indicator with a value
+                        for (let i = 0; i < countIndicators.length; i++) {
+                            if (countIndicators[i].style.display !== 'none') {
+                                currentCount = parseInt(countIndicators[i].textContent, 10) || 0;
+                                break;
                             }
-                            
-                            // Add the quantity from the form, or default to 1
-                            const quantityInput = form.querySelector('input[name="quantity"]');
-                            const quantity = quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1;
-                            newCount = currentCount + quantity;
                         }
+                        
+                        // Add the quantity from the form
+                        const quantityInput = form.querySelector('input[name="quantity"]');
+                        const quantity = quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1;
+                        newCount = currentCount + quantity;
                     }
                     
-                    // Make absolutely sure we have a valid number
-                    newCount = parseInt(newCount, 10) || 0;
-                    
-                    // Update all cart count indicators immediately (with a slight delay to ensure DOM is ready)
-                    setTimeout(() => {
-                        updateCartCount(newCount);
-                    }, 10);
+                    // Ensure valid number and update instantly
+                    updateCartCount(parseInt(newCount, 10) || 0);
                 } else {
                     // Show error message
                     showToast(`Error: ${data.message || 'Could not add to cart'}`, 'error-toast');
                 }
-            })            .catch(error => {
+            })
+            .catch(error => {
                 console.error('Error adding to cart:', error);
                 
                 // Remove loading spinner
@@ -249,9 +245,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitButton.removeChild(loadingSpinner);
                 }
                 submitButton.disabled = false;
+                  // Check if this is an authentication error
+                if (error.status === 401 && error.data && error.data.requires_auth) {
+                    // Redirect immediately to login page
+                    window.location.href = error.data.redirect || '/login';
+                    return;
+                }
                 
-                // Show error message
-                showToast('Error adding to cart. Please try again.', 'error-toast');
+                // Show generic error message for other errors
+                const message = error.data && error.data.message 
+                    ? `Error: ${error.data.message}` 
+                    : 'Error adding to cart. Please try again.';
+                showToast(message, 'error-toast');
             });
         });
     });
@@ -307,13 +312,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Convert count to number to avoid issues
         count = parseInt(count, 10) || 0;
         
-        // Find ALL cart count indicators across the page using multiple selectors for better coverage
+        // Find ALL cart count indicators across the page
         const cartCountElements = document.querySelectorAll('.cart-count, .cart-count-indicator');
         
         // Find all shopping cart links that might need count indicators
         const cartIcons = document.querySelectorAll('.header-icons a[href*="cart"], .shopping-cart, a.shopping-cart, a[href*="cart"]');
-        
-        console.log(`CART UPDATE: Updating cart count to ${count} (found ${cartCountElements.length} indicators and ${cartIcons.length} cart icons)`);
         
         // Process any existing indicators first
         if (cartCountElements.length > 0) {

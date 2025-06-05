@@ -137,10 +137,9 @@
                         <div class="password-requirements">
                             Password must be at least 8 characters and include uppercase, lowercase, numbers, and special characters.
                         </div>
-                        
-                        <div class="form-check">
+                          <div class="form-check">
                             <input type="checkbox" name="terms" id="terms" required>
-                            <label for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> <span class="required-indicator">*</span></label>
+                            <label for="terms">I agree to the <a href="{{ route('terms-of-service') }}" target="_blank">Terms of Service</a> and <a href="{{ route('privacy-policy') }}" target="_blank">Privacy Policy</a> <span class="required-indicator">*</span></label>
                         </div>
                         
                         <div class="form-check">

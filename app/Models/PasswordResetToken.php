@@ -11,21 +11,40 @@ class PasswordResetToken extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'email',
-        'token',
-        'created_at',
+        'user_id',
+        'admin_id',
+        'token_hash',
+        'request_ip',
         'expires_at',
-        'used_at'
+        'is_used',
+        'used_at',
+        'reset_type'
     ];
 
     protected $casts = [
-        'created_at' => 'datetime',
         'expires_at' => 'datetime',
-        'used_at' => 'datetime'
+        'used_at' => 'datetime',
+        'is_used' => 'boolean'
     ];
 
     // No timestamps needed for this model
     public $timestamps = false;
+
+    /**
+     * Get the user that owns the password reset token.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the admin that owns the password reset token.
+     */
+    public function admin()
+    {
+        return $this->belongsTo(Admin::class);
+    }
 
     public function isExpired()
     {
@@ -34,11 +53,12 @@ class PasswordResetToken extends Model
 
     public function isUsed()
     {
-        return !is_null($this->used_at);
+        return $this->is_used || !is_null($this->used_at);
     }
 
     public function markAsUsed()
     {
+        $this->is_used = true;
         $this->used_at = now();
         $this->save();
     }

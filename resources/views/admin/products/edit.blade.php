@@ -143,37 +143,25 @@
                         <div class="row">
                             @if($product->images && $product->images->count() > 0)
                                 @foreach($product->images as $image)
-                                    <div class="col-md-3 mb-3">
-                                        @php
-                                            // Smart image URL handling
-                                            $imageUrl = str_starts_with($image->image_url, 'http') 
-                                                ? $image->image_url 
-                                                : asset('storage/' . $image->image_url);
-                                            
-                                            // Get category fallback image
-                                            $categoryImageUrl = '';
+                                    <div class="col-md-3 mb-3">                                        @php
+                                            // Get category fallback for this product
+                                            $categoryFallback = null;
                                             if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                                $categoryImage = $product->directCategories->first()->image_url;
-                                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                                    ? $categoryImage 
-                                                    : asset('storage/' . $categoryImage);
+                                                $categoryFallback = $product->directCategories->first()->image_url;
                                             } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                                $categoryImage = $product->categories->first()->image_url;
-                                                $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                                    ? $categoryImage 
-                                                    : asset('storage/' . $categoryImage);
-                                            } else {
-                                                $categoryImageUrl = asset('admin-assets/img/undraw_posting_photo.svg');
+                                                $categoryFallback = $product->categories->first()->image_url;
                                             }
                                         @endphp
                                         <div class="card">
                                             <div class="position-relative" style="height: 200px; overflow: hidden;">
-                                                <img src="{{ $imageUrl }}" 
-                                                    class="card-img-top" 
-                                                    alt="{{ $image->alt_text ?: $product->name }}"
-                                                    style="width: 100%; height: 100%; object-fit: cover; object-position: center;"
-                                                    onerror="if(this.src !== '{{ $categoryImageUrl }}') { this.src='{{ $categoryImageUrl }}'; } else { this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null; }"
-                                                    loading="lazy">
+                                                @include('admin.components.image-with-fallback', [
+                                                    'src' => $image->image_url,
+                                                    'alt' => $image->alt_text ?: $product->name,
+                                                    'type' => 'product',
+                                                    'fallbacks' => [$categoryFallback],
+                                                    'class' => 'card-img-top',
+                                                    'style' => 'width: 100%; height: 100%; object-fit: cover; object-position: center;'
+                                                ])
                                                 @if($image->is_primary)
                                                     <span class="badge badge-primary position-absolute" style="top: 5px; right: 5px;">Main</span>
                                                 @endif
@@ -214,24 +202,22 @@
                         </small>
                         <!-- Hidden file input that will be submitted with the form -->
                         <div id="file-inputs-container"></div>
-                        <div id="new-image-preview" class="row mt-3"></div>
                     </div>
-                    
-                    <!-- Add Images from URLs -->
+                      <!-- Add Images from URLs -->
                     <div class="form-group">
                         <label>Add Images from URLs</label>
                         <div id="url-inputs">
                             <div class="input-group mb-2">
-                                <input type="url" class="form-control" name="image_urls[]" placeholder="Enter image URL (e.g., https://example.com/image.jpg)">
+                                <input type="url" class="form-control" name="image_urls[]" data-url-id="url_initial_0" placeholder="Enter image URL (e.g., https://example.com/image.jpg)">
                                 <div class="input-group-append">
-                                    <button type="button" class="btn btn-outline-success" onclick="addUrlInput()">
+                                    <button type="button" class="btn btn-outline-success add-url-btn" onclick="addUrlInput()">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <small class="form-text text-muted">Add images from external URLs. Click + to add more URLs.</small>
-                        <div id="url-image-preview" class="row mt-3"></div>
+                        <div id="image-preview" class="row mt-3"></div>
                     </div>
                 </div>
             </div>
@@ -255,6 +241,42 @@
     .select2-container .select2-selection--single {
         height: calc(1.5em + 0.75rem + 2px);
     }
+    
+    /* Image preview styling */
+    .image-container {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .image-container:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .image-remove-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        padding: 0.125rem 0.25rem;
+        opacity: 0.8;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+    }
+    
+    .image-remove-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    
+    .image-container .card-img-top {
+        height: 150px;
+        object-fit: cover;
+        transition: opacity 0.2s ease;
+    }
+    
+    .image-container:hover .card-img-top {
+        opacity: 0.9;
+    }
 </style>
 @endpush
 
@@ -262,8 +284,9 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Global array to store selected files
-    var selectedFiles = [];
+    // Global array to store selected files with unique IDs
+    var fileStorage = [];
+    var nextFileId = 0;
 
     // Initialize Select2 for categories
     $('.select2').select2({
@@ -274,190 +297,235 @@ $(document).ready(function() {
     $('#image-input').change(function(e) {
         var newFiles = Array.from(e.target.files);
         
-        // Add new files to our collection
+        // Add new files to our collection with unique IDs
         if (newFiles.length > 0) {
-            selectedFiles = selectedFiles.concat(newFiles);
+            newFiles.forEach(function(file) {
+                var fileId = 'file_' + nextFileId++;
+                fileStorage.push({
+                    id: fileId,
+                    file: file
+                });
+                
+                // Add preview for this file immediately
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var radioIndex = $('#image-preview .image-container').length;
+                    addImageToPreview(e.target.result, radioIndex, 'file', fileId);
+                    updateRadioIndices();
+                };
+                reader.readAsDataURL(file);
+            });
             
-            // Update the label
+            // Update the label and hidden inputs
             updateFileLabel();
+            updateHiddenInputs();
             
             // Clear the input so the same files can be selected again if needed
             $(this).val('');
-            
-            // Create hidden inputs for form submission
-            updateHiddenInputs();
-            
-            // Update the preview
-            updateNewImagePreview();
         }
     });
     
     // Clear selected files
     $('#clear-files').click(function() {
-        selectedFiles = [];
+        fileStorage = [];
         updateFileLabel();
         updateHiddenInputs();
-        updateNewImagePreview();
+        // Remove only file-type images from preview
+        $('#image-preview .image-container[data-type="file"]').remove();
+        updateRadioIndices();
     });
     
-    // Handle URL input changes
+    // Handle individual image removal
+    $(document).on('click', '.remove-image-btn', function() {
+        var container = $(this).closest('.image-container');
+        var itemId = container.data('id');
+        var itemType = container.data('type');
+        
+        if (itemType === 'file') {
+            // Remove from fileStorage array
+            fileStorage = fileStorage.filter(function(item) {
+                return item.id !== itemId;
+            });
+            
+            // Update file label and hidden inputs
+            updateFileLabel();
+            updateHiddenInputs();
+        } else if (itemType === 'url') {
+            // Clear the corresponding URL input
+            $('input[data-url-id="' + itemId + '"]').val('');
+        }
+        
+        // Remove the image container
+        container.remove();
+        
+        // Update radio button indices
+        updateRadioIndices();
+    });
+
+    // Handle URL input changes with debouncing to prevent multiple triggers
     $(document).on('input', 'input[name="image_urls[]"]', function() {
-        updateUrlImagePreview();
+        var input = $(this);
+        var url = input.val().trim();
+        // Use a unique identifier based on the input element itself
+        var inputId = input.attr('data-url-id') || 'url_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        if (!input.attr('data-url-id')) {
+            input.attr('data-url-id', inputId);
+        }
+        
+        var existingPreview = $('#image-preview .image-container[data-id="' + inputId + '"]');
+        
+        clearTimeout(window.urlUpdateTimeout);
+        window.urlUpdateTimeout = setTimeout(function() {
+            if (url) {
+                // If URL exists and no preview, add it
+                if (!existingPreview.length) {
+                    var radioIndex = $('#image-preview .image-container').length;
+                    addImageToPreview(url, radioIndex, 'url', inputId);
+                    updateRadioIndices();
+                } else {
+                    // Update existing preview image
+                    existingPreview.find('img').attr('src', url);
+                }
+            } else {
+                // If URL is empty, remove preview
+                existingPreview.remove();
+                updateRadioIndices();
+            }
+        }, 300);
     });
-    
+      
     // Function to update file selection label
     function updateFileLabel() {
-        if (selectedFiles.length > 0) {
-            var fileNames = selectedFiles.map(function(file) { return file.name; });
-            $('#file-label').text(selectedFiles.length + ' files selected');
-            $('#file-count').html('<strong>' + selectedFiles.length + ' files selected:</strong> ' + fileNames.join(', '));
+        if (fileStorage.length > 0) {
+            var fileNames = fileStorage.map(function(item) { return item.file.name; });
+            $('#file-label').text(fileStorage.length + ' files selected');
+            $('#file-count').html('<strong>' + fileStorage.length + ' files selected:</strong> ' + fileNames.join(', '));
         } else {
             $('#file-label').text('Choose files...');
             $('#file-count').text('');
         }
     }
-      // Function to update hidden inputs for form submission
+    
+    // Function to update hidden inputs for form submission
     function updateHiddenInputs() {
         $('#file-inputs-container').empty();
         
-        for (var i = 0; i < selectedFiles.length; i++) {
+        fileStorage.forEach(function(item) {
             var fileInput = $('<input type="file" name="images[]" style="display:none;">');
             
             // Create a new DataTransfer object and add the file
             var dataTransfer = new DataTransfer();
-            dataTransfer.items.add(selectedFiles[i]);
+            dataTransfer.items.add(item.file);
             fileInput[0].files = dataTransfer.files;
             
             $('#file-inputs-container').append(fileInput);
-        }
-    }
-    
-    // Function to update file selection label
-    function updateFileLabel() {
-        if (selectedFiles.length > 0) {
-            var fileNames = selectedFiles.map(function(file) { return file.name; });
-            $('#file-label').text(selectedFiles.length + ' files selected');
-            $('#file-count').html('<strong>' + selectedFiles.length + ' files selected:</strong> ' + fileNames.join(', '));
-        } else {
-            $('#file-label').text('Choose files...');
-            $('#file-count').text('');
-        }
+        });
     }
 });
 
 function addUrlInput() {
+    // First, convert the current "+" button to a "-" button
+    $('.add-url-btn').each(function() {
+        $(this).removeClass('btn-outline-success add-url-btn')
+               .addClass('btn-outline-danger remove-url-btn')
+               .attr('onclick', 'removeUrlInput(this)')
+               .html('<i class="fas fa-minus"></i>');
+    });
+    
+    // Now add a new input with a "+" button
+    var uniqueId = 'url_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     var newInput = `
         <div class="input-group mb-2">
-            <input type="url" class="form-control" name="image_urls[]" placeholder="Enter image URL (e.g., https://example.com/image.jpg)">
+            <input type="url" class="form-control" name="image_urls[]" data-url-id="${uniqueId}" placeholder="Enter image URL (e.g., https://example.com/image.jpg)">
             <div class="input-group-append">
-                <button type="button" class="btn btn-outline-danger" onclick="removeUrlInput(this)">
-                    <i class="fas fa-minus"></i>
+                <button type="button" class="btn btn-outline-success add-url-btn" onclick="addUrlInput()">
+                    <i class="fas fa-plus"></i>
                 </button>
             </div>
         </div>
     `;
-    $('#url-inputs').append(newInput);
+    $('#url-inputs').prepend(newInput);
 }
 
 function removeUrlInput(button) {
-    $(button).closest('.input-group').remove();
-    updateUrlImagePreview();
+    var inputGroup = $(button).closest('.input-group');
+    var input = inputGroup.find('input[name="image_urls[]"]');
+    var urlId = input.attr('data-url-id');
+    
+    // Remove corresponding image preview if it exists
+    if (urlId) {
+        $('#image-preview .image-container[data-id="' + urlId + '"]').remove();
+    }
+    
+    // Remove the input group
+    inputGroup.remove();
+    
+    // If there are no URL inputs left, add a new one with a "+" button
+    if ($('#url-inputs .input-group').length === 0) {
+        var uniqueId = 'url_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        var newInput = `
+            <div class="input-group mb-2">
+                <input type="url" class="form-control" name="image_urls[]" data-url-id="${uniqueId}" placeholder="Enter image URL (e.g., https://example.com/image.jpg)">
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-success add-url-btn" onclick="addUrlInput()">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        $('#url-inputs').append(newInput);
+    }
+      // Update radio button indices
+    updateRadioIndices();
 }
 
-function removeSelectedImage(button) {
-    // Get the container with data attributes
-    var container = $(button).closest('[data-index]');
-    var index = container.data('index');
-    
-    // Remove from selectedFiles array
-    selectedFiles.splice(index, 1);
-    
-    // Update hidden inputs and preview
-    updateFileLabel();
-    updateHiddenInputs();
-    updateNewImagePreview();
-}
-
-function removeUrlImage(button) {
-    // Get the container with data attributes
-    var container = $(button).closest('[data-url-index]');
-    var inputIndex = container.data('url-index');
-    
-    // Clear the URL in the input field
-    $('input[name="image_urls[]"]').eq(inputIndex).val('');
-    
-    // Update the preview
-    updateUrlImagePreview();
-}
-
-function updateNewImagePreview() {
-    $('#new-image-preview').html('');
-    
-    if(selectedFiles.length > 0) {
-        for(var i = 0; i < selectedFiles.length; i++) {
-            (function(file, index) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    var imageDiv = $(`
-                        <div class="col-md-3 mb-3" data-index="${index}" data-type="file">
-                            <div class="card">
-                                <div class="position-relative" style="height: 200px; overflow: hidden;">
-                                    <img src="${e.target.result}" class="card-img-top" alt="New Image" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px; padding: 0.125rem 0.25rem; opacity: 0.9;"
-                                            onclick="removeSelectedImage(this)">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                                <div class="card-body p-2">
-                                    <div class="custom-control custom-radio">
-                                        <input type="radio" class="custom-control-input" id="main_image_new_${index}" name="main_image" value="new-${index}">
-                                        <label class="custom-control-label" for="main_image_new_${index}">Make Main</label>
-                                    </div>
-                                    <small class="text-muted">File Upload</small>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                    $('#new-image-preview').append(imageDiv);
-                };
-                reader.readAsDataURL(file);
-            })(selectedFiles[i], i);
+// New function to update radio button indices without recreating all images
+function updateRadioIndices() {
+    var hasChecked = false;
+    $('#image-preview .image-container').each(function(index) {
+        var radioInput = $(this).find('input[type="radio"]');
+        var radioLabel = $(this).find('label');
+        var newId = 'main_image_' + index;
+        
+        radioInput.attr('id', newId);
+        radioInput.attr('value', index);
+        radioLabel.attr('for', newId);
+        
+        // Check if this radio is already checked
+        if (radioInput.prop('checked')) {
+            hasChecked = true;
         }
+    });
+    
+    // If no radio is checked, check the first one
+    if (!hasChecked && $('#image-preview .image-container').length > 0) {
+        $('#image-preview .image-container:first input[type="radio"]').prop('checked', true);
     }
 }
 
-function updateUrlImagePreview() {
-    $('#url-image-preview').html('');
-    var urlIndex = 0;
-    
-    $('input[name="image_urls[]"]').each(function(inputIndex) {
-        var url = $(this).val().trim();
-        if (url) {
-            var imageDiv = $(`
-                <div class="col-md-3 mb-3" data-url-index="${inputIndex}" data-type="url">
-                    <div class="card">
-                        <div class="position-relative" style="height: 200px; overflow: hidden;">
-                            <img src="${url}" class="card-img-top" alt="URL Image" style="width: 100%; height: 100%; object-fit: cover; object-position: center;"
-                                 onerror="this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.style.opacity='0.5';">
-                            <button type="button" class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px; padding: 0.125rem 0.25rem; opacity: 0.9;"
-                                    onclick="removeUrlImage(this)">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="custom-control custom-radio">
-                                <input type="radio" class="custom-control-input" id="main_image_url_${urlIndex}" name="main_image" value="url-${urlIndex}">
-                                <label class="custom-control-label" for="main_image_url_${urlIndex}">Make Main</label>
-                            </div>
-                            <small class="text-muted">URL Image</small>
-                        </div>
-                    </div>
+function addImageToPreview(src, radioIndex, type, itemId) {
+    var imageDiv = $(`
+        <div class="col-md-3 mb-3 image-container" data-id="${itemId}" data-type="${type}">
+            <div class="card h-100">
+                <div class="position-relative">
+                    <img src="${src}" class="card-img-top" alt="Product Image" 
+                         style="width: 100%; height: 200px; object-fit: cover; object-position: center;"
+                         onerror="this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.style.opacity='0.5';">
+                    <button type="button" class="btn btn-danger btn-sm image-remove-btn remove-image-btn" title="Remove image">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-            `);
-            $('#url-image-preview').append(imageDiv);
-            urlIndex++;
-        }
-    });
+                <div class="card-body p-2">
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="main_image_${radioIndex}" name="main_image" value="${radioIndex}" ${radioIndex == 0 ? 'checked' : ''}>
+                        <label class="custom-control-label" for="main_image_${radioIndex}">Main Image</label>
+                    </div>
+                    <small class="text-muted">${type === 'file' ? 'File Upload' : 'URL'}</small>
+                </div>
+            </div>
+        </div>
+    `);
+    $('#image-preview').append(imageDiv);
 }
 </script>
 @endpush

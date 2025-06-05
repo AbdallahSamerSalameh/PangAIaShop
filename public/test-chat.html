@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chat - PangAIaShop</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .chat-container { max-width: 600px; margin: 0 auto; }
+        .messages { height: 300px; border: 1px solid #ddd; padding: 10px; overflow-y: scroll; margin-bottom: 10px; }
+        .message { margin-bottom: 10px; }
+        .user-message { text-align: right; color: blue; }
+        .bot-message { text-align: left; color: green; }
+        .input-container { display: flex; gap: 10px; }
+        #messageInput { flex: 1; padding: 10px; border: 1px solid #ddd; }
+        #sendButton { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .error { color: red; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Test Chat - PangAIaShop</h1>
+        <div class="messages" id="messages"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message..." />
+            <button id="sendButton">Send</button>
+        </div>
+        <button onclick="clearChat()">Clear Chat</button>
+        <div id="debugInfo" class="debug" style="display: none;"></div>
+    </div>
+
+    <script>
+        let conversation = [];
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const debugDiv = document.getElementById('debugInfo');
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = `${isUser ? 'You' : 'Bot'}: ${content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showError(message, debug = null) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message error';
+            errorDiv.textContent = `Error: ${message}`;
+            messagesDiv.appendChild(errorDiv);
+            
+            if (debug) {
+                debugDiv.textContent = debug;
+                debugDiv.style.display = 'block';
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            messageInput.value = '';
+
+            try {
+                const response = await fetch('/chat/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation: conversation
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage(data.message);
+                    conversation = data.conversation || [];
+                } else {
+                    showError(data.error || 'Unknown error', data.debug);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        function clearChat() {
+            conversation = [];
+            messagesDiv.innerHTML = '';
+            debugDiv.style.display = 'none';
+        }
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+
+        // Add initial test message
+        addMessage('Chat system loaded. Try sending a message!');
+    </script>
+</body>
+</html>

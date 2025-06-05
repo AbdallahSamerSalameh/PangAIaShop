@@ -49,8 +49,7 @@
     }
     .auth-links a:hover {
         text-decoration: underline;
-    }
-    .remember-me {
+    }    .remember-me {
         display: flex;
         align-items: center;
         margin-bottom: 20px;
@@ -59,6 +58,17 @@
         width: auto;
         margin-right: 10px;
         margin-bottom: 0;
+    }
+    .remember-me label {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    .remember-me a {
+        color: #F28123;
+        text-decoration: none;
+    }
+    .remember-me a:hover {
+        text-decoration: underline;
     }
     .error-message {
         color: #d9534f;
@@ -118,21 +128,20 @@
                     @endif
                     
                     <form action="{{ route('login') }}" method="POST" class="auth-form">
-                        @csrf
-                        <input type="email" name="email" placeholder="Email" value="{{ old('email') }}" required autofocus>
+                        @csrf                        <input type="email" name="email" placeholder="Email" value="{{ old('email') }}" required autofocus>
                         <input type="password" name="password" placeholder="Password" required>
                         
-                        <div class="remember-me">
-                            <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-                            <label for="remember">Remember Me</label>
-                        </div>
+                        {{-- <div class="remember-me">
+                            <input type="checkbox" name="agree_terms" id="agree_terms" required>
+                            <label for="agree_terms">I agree to the <a href="{{ route('terms-of-service') }}" target="_blank">Terms of Service</a> and <a href="{{ route('privacy-policy') }}" target="_blank">Privacy Policy</a> *</label>
+                        </div> --}}
                         
                         <button type="submit">Login</button>
                     </form>
                     
                     <div class="auth-links">
                         <p>Don't have an account? <a href="{{ route('register') }}">Register</a></p>
-                        <p>Forgot your password? <a href="{{ route('password.request') }}">Reset Password</a></p>
+                        {{-- <p>Forgot your password? <a href="{{ route('password.request') }}">Reset Password</a></p> --}}
                     </div>
                 </div>
             </div>

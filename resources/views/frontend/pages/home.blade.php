@@ -176,13 +176,11 @@
             <div class="row">
                 @foreach ($featuredProducts as $product)
                     <div class="col-lg-3 col-md-6 text-center mb-4">
-                        <div class="single-product-item">                            <div class="product-image">
+                        <div class="single-product-item">
+                            <div class="product-image">
                                 <a href="{{ route('product.show', $product->id) }}">
                                     <img src="{{ asset($product->featured_image) }}" alt="{{ $product->name }}"
                                          onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                    @if (!$product->in_stock)
-                                        <span class="out-of-stock">Out of Stock</span>
-                                    @endif
                                 </a>
                             </div>
                             <div class="product-info-section">
@@ -198,16 +196,23 @@
                                 <p class="product-category"><small>{{ $product->category_name }}</small></p>
                             </div>
                             <div class="product-action-buttons">
-                                <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <input type="hidden" name="variant_id" value="">
-                                    <button type="submit" class="cart-btn" {{ !$product->in_stock ? 'disabled' : '' }}>
-                                        <i class="fas fa-shopping-cart"></i>
-                                        {{ $product->in_stock ? 'Add to Cart' : 'Out of Stock' }}
+                                @if ($product->inventory && $product->inventory->quantity > 0)
+                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <input type="hidden" name="variant_id" value="">
+                                        <button type="submit" class="cart-btn">
+                                            <i class="fas fa-shopping-cart"></i>
+                                            Add to Cart
+                                        </button>
+                                    </form>
+                                @else
+                                    <button type="button" class="cart-btn" disabled>
+                                        <i class="fas fa-ban"></i>
+                                        Out of Stock
                                     </button>
-                                </form>
+                                @endif
                                 @auth
                                     <form action="{{ route('wishlist.add') }}" method="POST"
                                         class="d-inline mt-2 wishlist-form">
@@ -242,20 +247,15 @@
                         <p>Check out the latest additions to our inventory</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <div class="row">
                 @foreach ($newArrivals as $product)
                     <div class="col-lg-3 col-md-6 text-center mb-4">
-                        <div class="single-product-item">                            <div class="product-image">
+                        <div class="single-product-item">
+                            <div class="product-image">
                                 <a href="{{ route('product.show', $product->id) }}">
                                     <img src="{{ asset($product->featured_image) }}" alt="{{ $product->name }}"
                                          onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                    @if (!$product->in_stock)
-                                        <span class="out-of-stock">Out of Stock</span>
-                                    @else
-                                        <span class="new-product">New</span>
-                                    @endif
+                                    <span class="new-product">New</span>
                                 </a>
                             </div>
                             <div class="product-info-section">
@@ -271,16 +271,23 @@
                                 <p class="product-category"><small>{{ $product->category_name }}</small></p>
                             </div>
                             <div class="product-action-buttons">
-                                <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <input type="hidden" name="variant_id" value="">
-                                    <button type="submit" class="cart-btn" {{ !$product->in_stock ? 'disabled' : '' }}>
-                                        <i class="fas fa-shopping-cart"></i>
-                                        {{ $product->in_stock ? 'Add to Cart' : 'Out of Stock' }}
+                                @if ($product->inventory && $product->inventory->quantity > 0)
+                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <input type="hidden" name="variant_id" value="">
+                                        <button type="submit" class="cart-btn">
+                                            <i class="fas fa-shopping-cart"></i>
+                                            Add to Cart
+                                        </button>
+                                    </form>
+                                @else
+                                    <button type="button" class="cart-btn" disabled>
+                                        <i class="fas fa-ban"></i>
+                                        Out of Stock
                                     </button>
-                                </form>
+                                @endif
                                 @auth
                                     <form action="{{ route('wishlist.add') }}" method="POST"
                                         class="d-inline mt-2 wishlist-form">
@@ -308,9 +315,8 @@
                 <div class="image-column col-lg-6">
                     <div class="image">
                         <div class="price-box">
-                            <div class="inner-price">
-                                <span class="price">
-                                    <strong>30%</strong> <br> off
+                            <div class="inner-price">                                <span class="price">
+                                    <strong>Up to 25%</strong> <br> off
                                 </span>
                             </div>
                         </div>
@@ -325,7 +331,7 @@
                     </div>
                     <!--Countdown Timer-->
                     <div class="time-counter">
-                        <div class="time-countdown clearfix" data-countdown="2025/12/01">
+                        <div class="time-countdown clearfix" data-countdown="2025/05/31">
                             <div class="counter-column">
                                 <div class="inner"><span class="count">00</span>Days</div>
                             </div>
@@ -358,20 +364,15 @@
                         <p>Our most popular products that customers love</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <div class="row">
                 @foreach ($bestSellers as $product)
                     <div class="col-lg-3 col-md-6 text-center mb-4">
-                        <div class="single-product-item">                            <div class="product-image">
+                        <div class="single-product-item">
+                            <div class="product-image">
                                 <a href="{{ route('product.show', $product->id) }}">
                                     <img src="{{ asset($product->featured_image) }}" alt="{{ $product->name }}"
                                          onerror="this.onerror=null; this.src='{{ $product->categories->isNotEmpty() ? asset($product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                    @if (!$product->in_stock)
-                                        <span class="out-of-stock">Out of Stock</span>
-                                    @else
-                                        <span class="best-seller">Best Seller</span>
-                                    @endif
+                                    <span class="best-seller">Best Seller</span>
                                 </a>
                             </div>
                             <div class="product-info-section">
@@ -387,16 +388,23 @@
                                 <p class="product-category"><small>{{ $product->category_name }}</small></p>
                             </div>
                             <div class="product-action-buttons">
-                                <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <input type="hidden" name="variant_id" value="">
-                                    <button type="submit" class="cart-btn" {{ !$product->in_stock ? 'disabled' : '' }}>
-                                        <i class="fas fa-shopping-cart"></i>
-                                        {{ $product->in_stock ? 'Add to Cart' : 'Out of Stock' }}
+                                @if ($product->inventory && $product->inventory->quantity > 0)
+                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <input type="hidden" name="variant_id" value="">
+                                        <button type="submit" class="cart-btn">
+                                            <i class="fas fa-shopping-cart"></i>
+                                            Add to Cart
+                                        </button>
+                                    </form>
+                                @else
+                                    <button type="button" class="cart-btn" disabled>
+                                        <i class="fas fa-ban"></i>
+                                        Out of Stock
                                     </button>
-                                </form>
+                                @endif
                                 @auth
                                     <form action="{{ route('wishlist.add') }}" method="POST"
                                         class="d-inline mt-2 wishlist-form">
@@ -548,7 +556,7 @@
     </div>
     <!-- end logo carousel -->
 
-    <!-- Newsletter subscription section -->
+    {{-- <!-- Newsletter subscription section -->
     <div class="subscribe-section">
         <div class="container">
             <div class="row">
@@ -566,7 +574,7 @@
             </div>
         </div>
     </div>
-    <!-- end newsletter section -->
+    <!-- end newsletter section --> --}}
 @endsection
 
 @section('styles')
@@ -828,10 +836,9 @@
 @endsection
 
 @section('scripts')
-    <script>
-        $(document).ready(function() {
-            // Update the countdown date to a future date
-            $('.time-countdown').attr('data-countdown', '2025/12/01');
+    <script>        $(document).ready(function() {
+            // Update the countdown date to end of this month
+            $('.time-countdown').attr('data-countdown', '2025/05/31');
         });
     </script>
     {{-- Remove per-page wishlist script; using wishlist-common.js for functionality --}}

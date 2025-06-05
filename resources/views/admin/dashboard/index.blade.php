@@ -6,9 +6,9 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+    {{-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
         <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
-    </a>
+    </a> --}}
 </div>
 
 <!-- Content Row -->
@@ -95,7 +95,7 @@
             <!-- Card Header - Dropdown -->
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Sales Overview</h6>
-                <div class="dropdown no-arrow">
+                {{-- <div class="dropdown no-arrow">
                     <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
@@ -108,7 +108,7 @@
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="#">Something else here</a>
                     </div>
-                </div>
+                </div> --}}
             </div>
             <!-- Card Body -->
             <div class="card-body">
@@ -125,7 +125,7 @@
             <!-- Card Header - Dropdown -->
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Sales by Category (%)</h6>
-                <div class="dropdown no-arrow">
+                {{-- <div class="dropdown no-arrow">
                     <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
@@ -138,7 +138,7 @@
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="#">Something else here</a>
                     </div>
-                </div>
+                </div> --}}
             </div>
             <!-- Card Body -->
             <div class="card-body">
@@ -230,13 +230,36 @@
                 <h6 class="m-0 font-weight-bold text-primary">Top Products</h6>
             </div>
             <div class="card-body">
-                @if(isset($topProducts) && $topProducts->count() > 0)
-                @foreach($topProducts as $product)
+                @if(isset($topProducts) && $topProducts->count() > 0)                @foreach($topProducts as $product)
                 <div class="d-flex align-items-center border-bottom py-2">
                     <div class="mr-3">
-                        <div class="icon-circle bg-success">
-                            <i class="fas fa-box text-white"></i>
-                        </div>
+                        @php
+                            // Get product image
+                            $productImage = null;
+                            $categoryFallback = null;
+                            
+                            // Get product image
+                            if($product->images && $product->images->count() > 0) {
+                                $primaryImage = $product->images->where('is_primary', true)->first();
+                                $productImage = $primaryImage ? $primaryImage->image_url : $product->images->first()->image_url;
+                            }
+                            
+                            // Get category fallback
+                            if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
+                                $categoryFallback = $product->directCategories->first()->image_url;
+                            } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
+                                $categoryFallback = $product->categories->first()->image_url;
+                            }
+                        @endphp
+                        
+                        @include('admin.components.image-with-fallback', [
+                            'src' => $productImage,
+                            'alt' => $product->name,
+                            'type' => 'product',
+                            'fallbacks' => [$categoryFallback],
+                            'class' => 'rounded',
+                            'style' => 'width: 40px; height: 40px; object-fit: cover;'
+                        ])
                     </div>
                     <div class="flex-grow-1">
                         <div class="font-weight-bold">{{ $product->name }}</div>
@@ -266,6 +289,11 @@
 <script>
     window.salesData = @json($salesChartData);
     window.categoryData = @json($categoriesChartData);
+    
+    // Debug: Log data to console
+    console.log('Sales Data:', window.salesData);
+    console.log('Category Data:', window.categoryData);
+    console.log('Chart.js loaded:', typeof Chart !== 'undefined');
 </script>
 
 <!-- Page level custom scripts with custom branding colors -->

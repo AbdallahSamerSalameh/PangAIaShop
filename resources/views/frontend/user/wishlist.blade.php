@@ -340,11 +340,10 @@
                                     <div class="product-image">
                                         <a href="{{ route('product.show', $item->product->id) }}">
                                             <img src="{{ $item->product->featured_image }}" alt="{{ $item->product->name }}" 
-                                                 onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">
-                                            @php
+                                                 onerror="this.onerror=null; this.src='{{ $item->product->categories->isNotEmpty() ? asset($item->product->categories->first()->image_url ?? 'assets/img/categories/default-category.jpg') : asset('assets/img/categories/default-category.jpg') }}'">                                            @php
                                                 $inStock = true;
-                                                if ($item->product->inventory && $item->product->inventory->count() > 0) {
-                                                    $productInventory = $item->product->inventory->first();
+                                                if ($item->product->inventory) {
+                                                    $productInventory = $item->product->inventory;
                                                     $inStock = $productInventory->quantity > 0;
                                                 } else {
                                                     $inStock = false;

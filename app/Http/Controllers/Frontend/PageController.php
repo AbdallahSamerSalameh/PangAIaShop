@@ -83,4 +83,24 @@ class PageController extends Controller
         
         return redirect()->back()->with('success', 'Thank you for subscribing to our newsletter!');
     }
+
+    /**
+     * Display the Terms of Service page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function termsOfService()
+    {
+        return view('frontend.pages.terms-of-service');
+    }
+
+    /**
+     * Display the Privacy Policy page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function privacyPolicy()
+    {
+        return view('frontend.pages.privacy-policy');
+    }
 }

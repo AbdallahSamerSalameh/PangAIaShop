@@ -113,7 +113,7 @@
                         </div>
                     @endif
                     
-                    <form action="{{ route('password.update') }}" method="POST" class="auth-form">
+                    <form action="{{ route('password.change.update') }}" method="POST" class="auth-form">
                         @csrf
                         @method('PATCH')
                         

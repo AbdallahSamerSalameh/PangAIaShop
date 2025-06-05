@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\AuditLoggable;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Product;
@@ -12,11 +13,21 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
-{    /**
+{
+    use AuditLoggable;
+    
+    /**
      * Show the admin dashboard
      */
     public function index()
-    {        // Get latest orders
+    {        // Log dashboard access
+        $this->logCustomAction(
+            'Accessed admin dashboard',
+            null,
+            'Admin viewed the main dashboard'
+        );
+        
+        // Get latest orders
         $latestOrders = Order::with('user')
             ->withCount('items as items_count')
             ->orderBy('order_date', 'desc')
@@ -188,33 +199,56 @@ class DashboardController extends Controller
             ->select('status', DB::raw('count(*) as count'))
             ->whereNull('deleted_at')
             ->groupBy('status')
-            ->get();
-
-        // Get top selling products
-        $topProducts = DB::table('order_items')
+            ->get();        // Get top selling products with their images
+        $topProductsData = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.status', '!=', 'Cancelled')
             ->where('orders.status', '!=', 'Refunded')
             ->select(
                 'products.id',
-                'products.name',
-                'products.price',
                 DB::raw('SUM(order_items.quantity) as sales_count'),
                 DB::raw('SUM(order_items.price * order_items.quantity) as total_revenue')
             )
-            ->groupBy('products.id', 'products.name', 'products.price')
+            ->groupBy('products.id')
             ->orderBy('total_revenue', 'desc')
             ->limit(5)
-            ->get();// Assign variable names for the view
+            ->get();
+
+        // Get the actual Product models with images
+        $topProducts = collect();
+        if ($topProductsData->isNotEmpty()) {
+            $productIds = $topProductsData->pluck('id');
+            $products = Product::with(['images', 'categories'])
+                ->whereIn('id', $productIds)
+                ->get()
+                ->keyBy('id');
+
+            // Merge the sales data with product models
+            $topProducts = $topProductsData->map(function ($item) use ($products) {
+                $product = $products->get($item->id);
+                if ($product) {
+                    $product->sales_count = $item->sales_count;
+                    $product->total_revenue = $item->total_revenue;
+                    return $product;
+                }
+                return null;
+            })->filter();
+        }// Assign variable names for the view
         $ordersGrowth = $ordersChange;
         $customersGrowth = $customersChange;
         $recentOrders = $latestOrders;  // Make the variable available with both names
-          // Prepare chart data
+        
+        // Prepare chart data - ensure months are in correct order and format
         $salesChartData = [
             'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            'data' => array_values($revenueByMonth)
+            'data' => []
         ];
+        
+        // Fill in the sales data for each month (1-12)
+        for ($i = 1; $i <= 12; $i++) {
+            $salesChartData['data'][] = isset($revenueByMonth[$i]) ? (float)$revenueByMonth[$i] : 0;
+        }
           // Prepare category chart data with fallback for empty data
         if (empty($salesByCategory) || array_sum($salesByCategory) == 0) {
             $categoriesChartData = [

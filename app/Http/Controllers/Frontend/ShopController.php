@@ -17,11 +17,9 @@ class ShopController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\View\View
      */    public function index(Request $request)
-    {
-        try {
+    {        try {
             // Check database connection first
             \DB::connection()->getPdo();
-            \Log::info('Database connection successful');
             
             // Get all categories for the filter sidebar with better error handling
             try {
@@ -29,18 +27,12 @@ class ShopController extends Controller
                                     ->where('is_active', 1)
                                     ->orderBy('name')
                                     ->get();
-                \Log::debug('Categories loaded successfully', ['count' => $categories->count()]);
             } catch (\Exception $e) {
                 \Log::error('Error loading categories: ' . $e->getMessage());
                 $categories = collect([]);
-            }
-            
-            // Build query based on filters with better error handling
-            \Log::debug('Building product query with relationships');
+            }              // Build query based on filters with better error handling
             $query = Product::with([
-                'images' => function($query) {
-                    $query->where('is_primary', true);
-                }, 
+                'images', // Load all images, we'll filter for primary in transform
                 'categories', 
                 'inventory'
             ]);
@@ -51,13 +43,10 @@ class ShopController extends Controller
                 $query->whereHas('categories', function($q) use ($categoryId) {
                     $q->where('categories.id', $categoryId);
                 });
-            }
-              // Price range filter - with better error handling
+            }            // Price range filter - with better error handling
             if ($request->has('min_price') && $request->has('max_price')) {
                 $minPrice = $request->min_price;
                 $maxPrice = $request->max_price;
-                
-                \Log::debug('Applying price filter', ['min' => $minPrice, 'max' => $maxPrice]);
                 
                 try {
                     // Using a safer approach that handles null sale_price values
@@ -131,60 +120,45 @@ class ShopController extends Controller
                 \Log::warning('Error in product sorting, falling back to newest: ' . $e->getMessage());
                 // Fallback to a safe default sorting if there's an error
                 $query->orderBy('created_at', 'desc');
-            }
-              // Get products with pagination - with added error handling and debugging
-            \Log::debug('About to execute product query', ['query' => $query->toSql()]);
+            }              // Get products with pagination - with added error handling
             
             // Get the base products with minimal relationships to reduce complexity
             $products = $query->where('status', 'active')
                               ->paginate(12)
                               ->appends($request->except('page'));
-            
-            // Format products for display with better error handling
+              // Format products for display - simplified and focused on fixing images
             $products->getCollection()->transform(function($product) {
-                try {
-                    // Set featured image - with better error handling
-                    if ($product->images && $product->images->isNotEmpty() && $product->images->first() && $product->images->first()->image_url) {
-                        $product->featured_image = $product->images->first()->image_url;
+                // Set featured image - handle both local and external URLs
+                if ($product->images && $product->images->isNotEmpty()) {
+                    // First try to get the primary image
+                    $primaryImage = $product->images->where('is_primary', true)->first();
+                    $imageToUse = $primaryImage ?: $product->images->first(); // Fallback to first image if no primary
+                    
+                    if ($imageToUse && $imageToUse->image_url) {
+                        $imageUrl = $imageToUse->image_url;
+                        // Check if it's an external URL (starts with http) or local storage path
+                        $product->featured_image = str_starts_with($imageUrl, 'http') 
+                            ? $imageUrl 
+                            : asset('storage/' . $imageUrl);
                     } else {
-                        $product->featured_image = 'assets/img/products/product-img-1.jpg';
-                    }                    // Check stock status using our new helper and macros
-                    if ($product->inventory && $product->inventory->isNotEmpty()) {
-                        // Use the collection macros we defined
-                        $isInStock = $product->inventory->isInStock();
-                        $stockQty = $product->inventory->safeQuantity();
-                        
-                        // Add detailed debug logging
-                        \Log::debug('Product inventory check using macros', [
-                            'product_id' => $product->id,
-                            'is_in_stock' => $isInStock,
-                            'stock_qty' => $stockQty,
-                            'first_inventory_id' => $product->inventory->first() ? $product->inventory->first()->id : 'none',
-                        ]);
-                        
-                        // Set the values on the product
-                        $product->in_stock = $isInStock;
-                        $product->stock_qty = $stockQty;
-                        
-                    } else {
-                        $product->in_stock = false;
-                        $product->stock_qty = 0;
+                        $product->featured_image = asset('assets/img/products/product-img-1.jpg');
                     }
-                    
-                    // Alternative approach using helper (uncommment if macros don't work)
-                    // \App\Helpers\InventoryHelper::updateProductStockInfo($product);
-                    
-                    // Get category names - with better error handling
-                    if ($product->categories && $product->categories->isNotEmpty()) {
-                        $product->category_names = $product->categories->pluck('name');
-                    } else {
-                        $product->category_names = collect(['Uncategorized']);
-                    }                } catch (\Exception $e) {
-                    \Log::warning('Error transforming product ID: ' . $product->id, ['error' => $e->getMessage()]);
-                    // Set default values if transformation fails
-                    $product->featured_image = 'assets/img/products/product-img-1.jpg';
+                } else {
+                    $product->featured_image = asset('assets/img/products/product-img-1.jpg');
+                }                // Simple stock status check using hasOne relationship
+                $productInventory = $product->inventory;
+                if ($productInventory && $productInventory->quantity > 0) {
+                    $product->in_stock = true;
+                    $product->stock_qty = $productInventory->quantity;
+                } else {
                     $product->in_stock = false;
                     $product->stock_qty = 0;
+                }
+                
+                // Get category names
+                if ($product->categories && $product->categories->isNotEmpty()) {
+                    $product->category_names = $product->categories->pluck('name');
+                } else {
                     $product->category_names = collect(['Uncategorized']);
                 }
                 
@@ -318,52 +292,40 @@ class ShopController extends Controller
                     }])->limit(4);
                 }
             ])->findOrFail($id);
-            
-            // Format product data
+              // Format product data
             $product->featured_image = $product->images->where('is_primary', true)->first() 
-                ? $product->images->where('is_primary', true)->first()->image_url 
-                : 'assets/img/products/product-img-1.jpg';            // Check stock status - inventory is a collection, so we need to use first()
+                ? ($product->images->where('is_primary', true)->first()->image_url && str_starts_with($product->images->where('is_primary', true)->first()->image_url, 'http')
+                    ? $product->images->where('is_primary', true)->first()->image_url
+                    : asset('storage/' . $product->images->where('is_primary', true)->first()->image_url))
+                : asset('assets/img/products/product-img-1.jpg');            // Check stock status - get actual inventory quantity for display
             $productInventory = $product->inventory->first();
+            $quantity = $productInventory ? intval($productInventory->quantity) : 0;
             
-            // Add enhanced debug logging for single product view
-            \Log::debug('Single product inventory check', [
-                'product_id' => $product->id,
-                'inventory_id' => $productInventory ? $productInventory->id : 'none',
-                'quantity' => $productInventory ? $productInventory->quantity : 'none',
-                'quantity_type' => $productInventory ? gettype($productInventory->quantity) : 'none',
-                'quantity_value' => $productInventory ? var_export($productInventory->quantity, true) : 'none',
-                'is_numeric' => $productInventory ? is_numeric($productInventory->quantity) : false,
-                'casting_to_int' => $productInventory ? (int)$productInventory->quantity : 0,
-                'raw_comparison' => $productInventory ? ($productInventory->quantity > 0 ? 'true' : 'false') : 'n/a',
-                'cast_comparison' => $productInventory ? ((int)$productInventory->quantity > 0 ? 'true' : 'false') : 'n/a'
-            ]);
-            
-            // Ensure we're working with an actual number for quantity
-            $rawQuantity = $productInventory ? $productInventory->quantity : 0;
-            $quantity = is_numeric($rawQuantity) ? intval($rawQuantity) : 0;
-            
-            // Force in_stock to a boolean and ensure stock_qty is an integer
-            $product->in_stock = $quantity > 0;
+            // Use the database in_stock status but ensure stock_qty is available for display
             $product->stock_qty = $quantity;
             
-            \Log::debug('Final product stock status', [
-                'product_id' => $product->id,
-                'final_in_stock' => $product->in_stock ? 'true' : 'false',
-                'final_stock_qty' => $product->stock_qty
-            ]);
+            // Only override in_stock if there's a clear mismatch (safety check)
+            if ($product->in_stock && $quantity <= 0) {
+                $product->in_stock = false;
+            } elseif (!$product->in_stock && $quantity > 0) {
+                $product->in_stock = true;
+            }
             $product->category_names = $product->categories->pluck('name');
             
             // Calculate average rating
             $avgRating = $product->reviews->avg('rating') ?: 0;
             $product->avg_rating = round($avgRating, 1);
             $product->review_count = $product->reviews->count();
-            
-            // Format related products
+              // Format related products
             $relatedProducts = $product->relatedProducts->map(function($related) {                
-                    $related->featured_image = $related->images->first() 
-                    ? $related->images->first()->image_url 
-                    : 'assets/img/products/product-img-1.jpg';                // Check stock status - inventory is a collection, so we need to use first()
-                $relatedInventory = $related->inventory->first();
+                $relatedImageUrl = $related->images->first() ? $related->images->first()->image_url : null;
+                $related->featured_image = $relatedImageUrl 
+                    ? (str_starts_with($relatedImageUrl, 'http') 
+                        ? $relatedImageUrl 
+                        : asset('storage/' . $relatedImageUrl))                    : asset('assets/img/products/product-img-1.jpg');
+
+                // Check stock status using hasOne relationship
+                $relatedInventory = $related->inventory;
                 
                 // Add enhanced debug logging for related products
                 \Log::debug('Related product inventory check', [
@@ -395,11 +357,15 @@ class ShopController extends Controller
                                     }, 'categories', 'inventory'])
                                     ->inRandomOrder()
                                     ->limit(4)
-                                    ->get()
-                                    ->map(function($product) {                                        $product->featured_image = $product->images->first() 
-                                            ? $product->images->first()->image_url 
-                                            : 'assets/img/products/product-img-1.jpg';                                        // Check stock status - inventory is a collection, so we need to use first()
-                                        $productInventory = $product->inventory->first();
+                                    ->get()                                    ->map(function($product) {                                        
+                                        $productImageUrl = $product->images->first() ? $product->images->first()->image_url : null;
+                                        $product->featured_image = $productImageUrl 
+                                            ? (str_starts_with($productImageUrl, 'http') 
+                                                ? $productImageUrl 
+                                                : asset('storage/' . $productImageUrl))                                            : asset('assets/img/products/product-img-1.jpg');
+
+                                        // Check stock status using hasOne relationship
+                                        $productInventory = $product->inventory;
                                         
                                         // Add enhanced debug logging for recently viewed products
                                         \Log::debug('Recently viewed product inventory check', [

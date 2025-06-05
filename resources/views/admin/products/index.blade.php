@@ -28,12 +28,66 @@
                         <option value="100" {{ request('per_page')==100 ? 'selected' : '' }}>100</option>
                     </select>
                     <label class="ml-2 text-nowrap">entries</label>
+                    
+                    <!-- Hidden inputs to preserve other parameters -->
+                    @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    @if(request('category_id'))
+                    <input type="hidden" name="category_id" value="{{ request('category_id') }}">
+                    @endif
+                    @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                    @endif
                 </form>
             </div>
             <div class="col-sm-4 offset-sm-4">
-                <div id="searchContainer"></div>
+                <form action="{{ route('admin.products.index') }}" method="GET" class="form-inline justify-content-end">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="search" class="form-control" placeholder="Search products..." 
+                               value="{{ request('search') }}" style="min-width: 200px;">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary btn-sm" type="submit">
+                                <i class="fas fa-search fa-sm"></i>
+                            </button>
+                            @if(request('search'))
+                            <a href="{{ route('admin.products.index', request()->except(['search', 'page'])) }}" 
+                               class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times fa-sm"></i>
+                            </a>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden inputs to preserve other parameters -->
+                    @if(request('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    @if(request('category_id'))
+                    <input type="hidden" name="category_id" value="{{ request('category_id') }}">
+                    @endif
+                    @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                    @endif
+                </form>
             </div>
         </div>
+
+        <!-- Active Search Filter Display -->
+        @if(request('search'))
+        <div class="mb-3">
+            <div class="d-flex flex-wrap align-items-center">
+                <span class="mr-2 text-muted">Active search:</span>
+                <span class="badge badge-info mr-2 mb-1">
+                    Search: {{ request('search') }}
+                    <a href="{{ route('admin.products.index', request()->except(['search', 'page'])) }}" 
+                       class="text-white ml-1">
+                        <i class="fas fa-times-circle"></i>
+                    </a>
+                </span>
+            </div>
+        </div>
+        @endif
 
         <div class="table-responsive">
             <table class="table table-bordered" id="productsTable" width="100%" cellspacing="0">
@@ -54,92 +108,33 @@
                     @foreach($products as $product)
                     <tr>
                         <td>{{ $product->id }}</td>                        <td>
-                            @if($product->images && $product->images->count() > 0 &&
-                            $product->images->where('is_primary', true)->first())
                             @php
-                                $primaryImage = $product->images->where('is_primary', true)->first();
-                                $imageUrl = str_starts_with($primaryImage->image_url, 'http') 
-                                    ? $primaryImage->image_url 
-                                    : asset('storage/' . $primaryImage->image_url);
+                                // Get product image
+                                $productImage = null;
+                                $categoryFallback = null;
                                 
-                                // Get category fallback image
-                                $categoryImageUrl = '';
-                                if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                    $categoryImage = $product->directCategories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
-                                } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                    $categoryImage = $product->categories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
-                                } else {
-                                    $categoryImageUrl = asset('admin-assets/img/undraw_posting_photo.svg');
+                                // Get primary or first product image
+                                if($product->images && $product->images->count() > 0) {
+                                    $primaryImage = $product->images->where('is_primary', true)->first();
+                                    $productImage = $primaryImage ? $primaryImage->image_url : $product->images->first()->image_url;
                                 }
-                            @endphp
-                            <img src="{{ $imageUrl }}" 
-                                alt="{{ $product->name }}" class="img-thumbnail"
-                                style="width: 50px; height: 50px; object-fit: cover;"
-                                onerror="this.src='{{ $categoryImageUrl }}'; this.onerror=function(){this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'};"
-                                loading="lazy">
-                            @elseif($product->images && $product->images->count() > 0)
-                            @php
-                                $firstImage = $product->images->first();
-                                $imageUrl = str_starts_with($firstImage->image_url, 'http') 
-                                    ? $firstImage->image_url 
-                                    : asset('storage/' . $firstImage->image_url);
                                 
-                                // Get category fallback image
-                                $categoryImageUrl = '';
+                                // Get category fallback
                                 if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                    $categoryImage = $product->directCategories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
+                                    $categoryFallback = $product->directCategories->first()->image_url;
                                 } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                    $categoryImage = $product->categories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
-                                } else {
-                                    $categoryImageUrl = asset('admin-assets/img/undraw_posting_photo.svg');
+                                    $categoryFallback = $product->categories->first()->image_url;
                                 }
                             @endphp
-                            <img src="{{ $imageUrl }}" 
-                                alt="{{ $product->name }}" class="img-thumbnail"
-                                style="width: 50px; height: 50px; object-fit: cover;"
-                                onerror="this.src='{{ $categoryImageUrl }}'; this.onerror=function(){this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'};"
-                                loading="lazy">
-                            @else
-                            @php
-                                // No product image, use category image directly
-                                $categoryImageUrl = '';
-                                if($product->directCategories && $product->directCategories->count() > 0 && $product->directCategories->first()->image_url) {
-                                    $categoryImage = $product->directCategories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
-                                } elseif($product->categories && $product->categories->count() > 0 && $product->categories->first()->image_url) {
-                                    $categoryImage = $product->categories->first()->image_url;
-                                    $categoryImageUrl = str_starts_with($categoryImage, 'http') 
-                                        ? $categoryImage 
-                                        : asset('storage/' . $categoryImage);
-                                }
-                            @endphp
-                            @if($categoryImageUrl)
-                            <img src="{{ $categoryImageUrl }}" 
-                                alt="{{ $product->name }}" class="img-thumbnail"
-                                style="width: 50px; height: 50px; object-fit: cover;"
-                                onerror="this.src='{{ asset('admin-assets/img/undraw_posting_photo.svg') }}'; this.onerror=null;"
-                                loading="lazy">
-                            @else
-                            <div class="bg-light d-flex align-items-center justify-content-center"
-                                style="width: 50px; height: 50px;">
-                                <i class="fas fa-image text-muted"></i>
-                            </div>
-                            @endif
-                            @endif
+                            
+                            @include('admin.components.image-with-fallback', [
+                                'src' => $productImage,
+                                'alt' => $product->name,
+                                'type' => 'product',
+                                'fallbacks' => [$categoryFallback],
+                                'class' => 'img-thumbnail',
+                                'style' => 'width: 50px; height: 50px; object-fit: cover;'
+                            ])
                         </td>
                         <td>{{ $product->name }}</td>                        <td>
                             @if($product->directCategories && $product->directCategories->count() > 0)
@@ -181,16 +176,14 @@
                                     <a class="dropdown-item" href="{{ route('admin.products.edit', $product->id) }}">
                                         <i class="fas fa-edit fa-sm mr-2"></i> Edit
                                     </a>
-                                    <div class="dropdown-divider"></div>
-                                    <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST"
+                                    <div class="dropdown-divider"></div>                                    <form id="delete-form-{{ $product->id }}" action="{{ route('admin.products.destroy', $product->id) }}" method="POST"
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="dropdown-item text-danger"
-                                            onclick="return confirm('Are you sure you want to delete this product?')">
-                                            <i class="fas fa-trash fa-sm mr-2"></i> Delete
-                                        </button>
-                                    </form>
+                                    </form>                                    <button type="button" class="dropdown-item text-danger"
+                                        onclick="showDeleteModal({{ $product->id }}, '{{ addslashes($product->name) }}', 'product')">
+                                        <i class="fas fa-trash fa-sm mr-2"></i> Delete
+                                    </button>
                                 </div>
                             </div>
                         </td>
@@ -215,10 +208,10 @@
             <div>
                 {{ $products->appends(request()->except('page'))->links('pagination::bootstrap-4') }}
             </div>
-        </div>
-        @endif
+        </div>        @endif
     </div>
 </div>
+
 @endsection
 
 @push('styles')
@@ -245,34 +238,31 @@
     .dataTables_paginate,
     .dataTables_info {
         display: none !important;
-    }    /* Custom styling for search filter */
-    #searchContainer .dataTables_filter {
-        margin-bottom: 0;
+    }
+
+    /* Search form styling */
+    .input-group-sm .form-control {
+        border-radius: 0.25rem 0 0 0.25rem;
     }
     
-    #searchContainer .dataTables_filter label {
-        margin-bottom: 0;
-        display: flex;
-        align-items: center;
-        font-weight: normal;
-        justify-content: flex-end;
-        width: 100%;
-        white-space: nowrap;
+    .input-group-sm .btn {
+        border-radius: 0 0.25rem 0.25rem 0;
+    }
+
+    /* Active filter badge styling */
+    .badge-info {
+        background-color: #17a2b8;
     }
     
-    #searchContainer .dataTables_filter input {
-        margin-left: 0.75rem;
-        width: 200px;
-        flex-shrink: 0;
-    }    /* Prevent text wrapping on form elements */
+    .badge-info .fas {
+        font-size: 10px;
+    }/* Prevent text wrapping on form elements */
     .text-nowrap {
         white-space: nowrap;
     }    /* Actions button hover styling */
     .btn-outline-primary:hover {
         color: #fff !important;
-    }
-
-    /* Actions button active/pressed styling */
+    }    /* Actions button active/pressed styling */
     .btn-outline-primary:active,
     .btn-outline-primary.active,
     .btn-outline-primary:focus {
@@ -290,24 +280,18 @@
 <!-- Page level custom scripts -->
 <script>
 $(document).ready(function() {
-    // Initialize DataTables with custom DOM structure
+    // Initialize DataTables with minimal configuration for styling only
     $('#productsTable').DataTable({
         "ordering": true,
-        "searching": true,
+        "searching": false, // Disable client-side search
         "responsive": true,
         "paging": false,
         "info": false,
-        "lengthChange": false,        "dom": 'frt', // Custom DOM layout - filter (f), table (r) and table content (t)
-        "language": {
-            "search": "Search products:",
-            "searchPlaceholder": "Enter search terms..."
-        },
-        "initComplete": function() {
-            // Move the search box to our custom container
-            var searchBox = $('.dataTables_filter');
-            searchBox.detach().appendTo('#searchContainer');
-            searchBox.addClass('text-right');
-        }
+        "lengthChange": false,
+        "dom": 'rt', // Only table (r) and table content (t) - removed filter (f)
+        "columnDefs": [
+            { "orderable": false, "targets": [1, 7] } // Disable ordering for Image and Actions columns
+        ]
     });
 });
 </script>

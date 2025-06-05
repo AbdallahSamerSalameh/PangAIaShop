@@ -23,18 +23,21 @@
                         <tbody>
                             @foreach($products as $product)
                                 <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">                                            @if(!empty($product['images']) && count($product['images']) > 0)
-                                                <img src="{{ $product['images'][0]['image_url'] }}" 
-                                                     alt="{{ $product['name'] }}" 
-                                                     class="img-thumbnail mr-3" 
-                                                     style="width: 80px; height: 80px; object-fit: cover;"
-                                                     onerror="this.onerror=null; this.src='{{ !empty($product['category_image']) ? asset($product['category_image']) : asset('assets/img/categories/default-category.jpg') }}'">
+                                    <td>                                        <div class="d-flex align-items-center">                                            @if(!empty($product['images']) && count($product['images']) > 0)
+                                                <a href="{{ route('product.show', $product['id']) }}" title="View {{ $product['name'] }}">
+                                                    <img src="{{ $product['images'][0]['image_url'] }}" 
+                                                         alt="{{ $product['name'] }}" 
+                                                         class="img-thumbnail mr-3" 
+                                                         style="width: 80px; height: 80px; object-fit: cover; cursor: pointer; transition: all 0.3s ease;"
+                                                         onerror="this.onerror=null; this.src='{{ !empty($product['category_image']) ? asset($product['category_image']) : asset('assets/img/categories/default-category.jpg') }}'">
+                                                </a>
                                             @else
-                                                <img src="{{ asset('assets/img/categories/default-category.jpg') }}" 
-                                                     alt="{{ $product['name'] }}" 
-                                                     class="img-thumbnail mr-3" 
-                                                     style="width: 80px; height: 80px; object-fit: cover;">
+                                                <a href="{{ route('product.show', $product['id']) }}" title="View {{ $product['name'] }}">
+                                                    <img src="{{ asset('assets/img/categories/default-category.jpg') }}" 
+                                                         alt="{{ $product['name'] }}" 
+                                                         class="img-thumbnail mr-3" 
+                                                         style="width: 80px; height: 80px; object-fit: cover; cursor: pointer; transition: all 0.3s ease;">
+                                                </a>
                                             @endif
                                             <div>
                                                 <h5 class="mb-0">{{ $product['name'] }}</h5>

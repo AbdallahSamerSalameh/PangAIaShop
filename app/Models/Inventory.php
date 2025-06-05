@@ -102,4 +102,64 @@ class Inventory extends Model
             }
         });
     }
+    
+    /**
+     * Get available quantity (total - reserved)
+     */
+    public function getAvailableQuantityAttribute()
+    {
+        return max(0, $this->quantity - ($this->reserved_quantity ?? 0));
+    }
+
+    /**
+     * Reserve inventory for cart items
+     * 
+     * @param int $quantity
+     * @return bool
+     */
+    public function reserveQuantity($quantity)
+    {
+        if ($this->available_quantity >= $quantity) {
+            $this->increment('reserved_quantity', $quantity);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Release reserved inventory (when cart items are removed or cart expires)
+     * 
+     * @param int $quantity
+     * @return bool
+     */
+    public function releaseReservedQuantity($quantity)
+    {
+        $currentReserved = $this->reserved_quantity ?? 0;
+        $toRelease = min($quantity, $currentReserved);
+        
+        if ($toRelease > 0) {
+            $this->decrement('reserved_quantity', $toRelease);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Convert reserved quantity to actual sold quantity (when order is completed)
+     * 
+     * @param int $quantity
+     * @return bool
+     */
+    public function commitReservedQuantity($quantity)
+    {
+        $currentReserved = $this->reserved_quantity ?? 0;
+        $toCommit = min($quantity, $currentReserved);
+        
+        if ($toCommit > 0 && $this->quantity >= $toCommit) {
+            $this->decrement('quantity', $toCommit);
+            $this->decrement('reserved_quantity', $toCommit);
+            return true;
+        }
+        return false;
+    }
 }

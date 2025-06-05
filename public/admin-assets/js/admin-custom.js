@@ -139,10 +139,13 @@ $(document).ready(function() {
                 $(this).fadeOut('slow');
             }, 5000);
         }
-    });
-
-    // Enhanced form validation styling
-    $('form').on('submit', function() {
+    });    // Enhanced form validation styling
+    $('form').on('submit', function(e) {
+        // Skip this behavior for product forms that handle their own file processing
+        if ($(this).find('input[type="file"]').length > 0 || $(this).find('#file-inputs-container').length > 0) {
+            return true;
+        }
+        
         $(this).find('.btn[type="submit"]').prop('disabled', true).html(
             '<i class="fas fa-spinner fa-spin"></i> Processing...'
         );

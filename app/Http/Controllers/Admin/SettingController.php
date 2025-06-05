@@ -3,18 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\AuditLoggable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class SettingController extends Controller
 {
+    use AuditLoggable;
     /**
      * Display the settings page.
      *
      * @return \Illuminate\View\View
-     */
-    public function index()
-    {
+     */    public function index()
+    {        // Log settings page access
+        $this->logCustomAction(
+            'settings_viewed',
+            null,
+            'Viewed settings page'
+        );
+        
         $generalSettings = $this->getGeneralSettings();
         $paymentSettings = $this->getPaymentSettings();
         $shippingSettings = $this->getShippingSettings();
@@ -177,8 +184,7 @@ class SettingController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
-     */
-    private function updateGeneralSettings(Request $request)
+     */    private function updateGeneralSettings(Request $request)
     {
         $validatedData = $request->validate([
             'site_name' => 'required|string|max:255',
@@ -195,30 +201,78 @@ class SettingController extends Controller
             'social_instagram' => 'nullable|url|max:255',
         ]);
         
-        // Update config for app name
-        updateEnvFile(['APP_NAME' => '"' . $validatedData['site_name'] . '"']);
+        // Store original data for audit logging
+        $originalData = [
+            'site_name' => config('app.name'),
+            'site_description' => setting('site_description'),
+            'contact_email' => setting('contact_email'),
+            'contact_phone' => setting('contact_phone'),
+            'address' => setting('address'),
+            'currency' => setting('currency'),
+            'currency_symbol' => setting('currency_symbol'),
+            'social_facebook' => setting('social_facebook'),
+            'social_twitter' => setting('social_twitter'),
+            'social_instagram' => setting('social_instagram'),
+        ];
         
-        // Update the rest of the settings
-        foreach ($validatedData as $key => $value) {
-            if ($key !== 'logo' && $key !== 'favicon') {
-                setting([$key => $value]);
+        try {
+            // Update config for app name
+            updateEnvFile(['APP_NAME' => '"' . $validatedData['site_name'] . '"']);
+            
+            // Update the rest of the settings
+            foreach ($validatedData as $key => $value) {
+                if ($key !== 'logo' && $key !== 'favicon') {
+                    setting([$key => $value]);
+                }
             }
+            
+            // Handle logo upload
+            if ($request->hasFile('logo')) {
+                $logoPath = $request->file('logo')->store('settings', 'public');
+                setting(['logo' => $logoPath]);
+            }
+            
+            // Handle favicon upload
+            if ($request->hasFile('favicon')) {
+                $faviconPath = $request->file('favicon')->store('settings', 'public');
+                setting(['favicon' => $faviconPath]);
+            }
+            
+            // Log the changes
+            $changes = [];
+            foreach ($validatedData as $key => $value) {
+                if ($key !== 'logo' && $key !== 'favicon' && isset($originalData[$key]) && $originalData[$key] != $value) {
+                    $changes[] = "{$key}: {$originalData[$key]} → {$value}";
+                }
+            }
+            
+            if ($request->hasFile('logo')) {
+                $changes[] = "logo: updated";
+            }
+            
+            if ($request->hasFile('favicon')) {
+                $changes[] = "favicon: updated";
+            }
+              $description = "Updated general settings";
+            if (!empty($changes)) {
+                $description .= " - Changes: " . implode(', ', $changes);
+            }
+            
+            $this->logCustomAction('update_general_settings', null, $description, ['changes' => $originalData]);
+            
+            return redirect()->route('admin.settings.index')
+                ->with('success', 'General settings updated successfully!');
+                
+        } catch (\Exception $e) {            // Log error for audit trail
+            $this->logCustomAction(
+                'settings_update_failed',
+                null,
+                "Failed to update general settings - Error: {$e->getMessage()}"
+            );
+            
+            return redirect()->route('admin.settings.index')
+                ->with('error', 'Error updating general settings: ' . $e->getMessage());
         }
-        
-        // Handle logo upload
-        if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('settings', 'public');
-            setting(['logo' => $logoPath]);
-        }
-        
-        // Handle favicon upload
-        if ($request->hasFile('favicon')) {
-            $faviconPath = $request->file('favicon')->store('settings', 'public');
-            setting(['favicon' => $faviconPath]);
-        }
-        
-        return redirect()->route('admin.settings.index')
-            ->with('success', 'General settings updated successfully!');
     }
     
     /**
@@ -226,8 +280,7 @@ class SettingController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
-     */
-    private function updatePaymentSettings(Request $request)
+     */    private function updatePaymentSettings(Request $request)
     {
         $validatedData = $request->validate([
             'payment_stripe_enabled' => 'boolean',
@@ -247,12 +300,51 @@ class SettingController extends Controller
             'allow_guest_checkout' => 'boolean',
         ]);
         
+        // Store original data for audit logging
+        $originalData = [];
         foreach ($validatedData as $key => $value) {
-            setting([$key => $value]);
+            $originalData[$key] = setting($key);
         }
         
-        return redirect()->route('admin.settings.index', ['tab' => 'payment'])
-            ->with('success', 'Payment settings updated successfully!');
+        try {
+            foreach ($validatedData as $key => $value) {
+                setting([$key => $value]);
+            }
+            
+            // Log the changes
+            $changes = [];
+            foreach ($validatedData as $key => $value) {
+                if ($originalData[$key] != $value) {
+                    // Don't log sensitive keys in detail
+                    if (strpos($key, 'secret') !== false || strpos($key, 'key') !== false) {
+                        $changes[] = "{$key}: updated";
+                    } else {
+                        $oldVal = $originalData[$key] ?? 'none';
+                        $changes[] = "{$key}: {$oldVal} → {$value}";
+                    }
+                }
+            }
+            
+            $description = "Updated payment settings";
+            if (!empty($changes)) {
+                $description .= " - Changes: " . implode(', ', $changes);            }
+            
+            $this->logCustomAction('update_payment_settings', null, $description, ['changes' => $originalData]);
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'payment'])
+                ->with('success', 'Payment settings updated successfully!');
+                
+        } catch (\Exception $e) {
+            // Log error for audit trail
+            $this->logCustomAction(
+                'settings_update_failed',
+                null,
+                "Failed to update payment settings - Error: {$e->getMessage()}"
+            );
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'payment'])
+                ->with('error', 'Error updating payment settings: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -260,8 +352,7 @@ class SettingController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
-     */
-    private function updateShippingSettings(Request $request)
+     */    private function updateShippingSettings(Request $request)
     {
         $validatedData = $request->validate([
             'shipping_standard_enabled' => 'boolean',
@@ -286,15 +377,57 @@ class SettingController extends Controller
             'shipping_allowed_countries.*' => 'string|size:2',
         ]);
         
-        // Handle allowed countries as comma-separated string
-        $validatedData['shipping_allowed_countries'] = implode(',', $validatedData['shipping_allowed_countries']);
-        
+        // Store original data for audit logging
+        $originalData = [];
         foreach ($validatedData as $key => $value) {
-            setting([$key => $value]);
+            if ($key === 'shipping_allowed_countries') {
+                $originalData[$key] = explode(',', setting('shipping_allowed_countries', ''));
+            } else {
+                $originalData[$key] = setting($key);
+            }
         }
         
-        return redirect()->route('admin.settings.index', ['tab' => 'shipping'])
-            ->with('success', 'Shipping settings updated successfully!');
+        try {
+            // Handle allowed countries as comma-separated string
+            $validatedData['shipping_allowed_countries'] = implode(',', $validatedData['shipping_allowed_countries']);
+            
+            foreach ($validatedData as $key => $value) {
+                setting([$key => $value]);
+            }
+            
+            // Log the changes
+            $changes = [];
+            foreach ($validatedData as $key => $value) {
+                $oldValue = $originalData[$key] ?? 'none';
+                if ($key === 'shipping_allowed_countries') {
+                    $oldCountries = is_array($oldValue) ? implode(',', $oldValue) : $oldValue;
+                    if ($oldCountries != $value) {
+                        $changes[] = "{$key}: {$oldCountries} → {$value}";
+                    }
+                } elseif ($oldValue != $value) {
+                    $changes[] = "{$key}: {$oldValue} → {$value}";
+                }
+            }
+            
+            $description = "Updated shipping settings";
+            if (!empty($changes)) {
+                $description .= " - Changes: " . implode(', ', $changes);            }
+            
+            $this->logCustomAction('update_shipping_settings', null, $description, ['changes' => $originalData]);
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'shipping'])
+                ->with('success', 'Shipping settings updated successfully!');
+                
+        } catch (\Exception $e) {
+            // Log error for audit trail
+            $this->logCustomAction(                'settings_update_failed',
+                null,
+                "Failed to update shipping settings - Error: {$e->getMessage()}"
+            );
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'shipping'])
+                ->with('error', 'Error updating shipping settings: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -302,8 +435,7 @@ class SettingController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
-     */
-    private function updateEmailSettings(Request $request)
+     */    private function updateEmailSettings(Request $request)
     {
         $validatedData = $request->validate([
             'mail_from_name' => 'required|string|max:255',
@@ -319,23 +451,70 @@ class SettingController extends Controller
             'email_template_delivery_confirmation' => 'boolean',
         ]);
         
-        // Update mail configuration in .env
-        updateEnvFile([
-            'MAIL_FROM_NAME' => '"' . $validatedData['mail_from_name'] . '"',
-            'MAIL_FROM_ADDRESS' => $validatedData['mail_from_address'],
-        ]);
+        // Store original data for audit logging
+        $originalData = [
+            'mail_from_name' => config('mail.from.name'),
+            'mail_from_address' => config('mail.from.address'),
+        ];
         
-        // Remove mail specific settings as they're handled separately
-        unset($validatedData['mail_from_name']);
-        unset($validatedData['mail_from_address']);
-        
-        // Save the rest of the settings
         foreach ($validatedData as $key => $value) {
-            setting([$key => $value]);
+            if (strpos($key, 'email_') === 0) {
+                $originalData[$key] = setting($key);
+            }
         }
         
-        return redirect()->route('admin.settings.index', ['tab' => 'email'])
-            ->with('success', 'Email settings updated successfully!');
+        try {
+            // Update mail configuration in .env
+            updateEnvFile([
+                'MAIL_FROM_NAME' => '"' . $validatedData['mail_from_name'] . '"',
+                'MAIL_FROM_ADDRESS' => $validatedData['mail_from_address'],
+            ]);
+            
+            // Remove mail specific settings as they're handled separately
+            unset($validatedData['mail_from_name']);
+            unset($validatedData['mail_from_address']);
+            
+            // Save the rest of the settings
+            foreach ($validatedData as $key => $value) {
+                setting([$key => $value]);
+            }
+            
+            // Log the changes
+            $changes = [];
+            if ($originalData['mail_from_name'] != $request->input('mail_from_name')) {
+                $changes[] = "mail_from_name: {$originalData['mail_from_name']} → {$request->input('mail_from_name')}";
+            }
+            if ($originalData['mail_from_address'] != $request->input('mail_from_address')) {
+                $changes[] = "mail_from_address: {$originalData['mail_from_address']} → {$request->input('mail_from_address')}";
+            }
+            
+            foreach ($validatedData as $key => $value) {
+                if (isset($originalData[$key]) && $originalData[$key] != $value) {
+                    $oldVal = $originalData[$key] ? 'enabled' : 'disabled';
+                    $newVal = $value ? 'enabled' : 'disabled';
+                    $changes[] = "{$key}: {$oldVal} → {$newVal}";
+                }
+            }
+            
+            $description = "Updated email settings";
+            if (!empty($changes)) {            $description .= " - Changes: " . implode(', ', $changes);
+            }
+            
+            $this->logCustomAction('update_email_settings', null, $description, ['changes' => $originalData]);
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'email'])
+                ->with('success', 'Email settings updated successfully!');
+                
+        } catch (\Exception $e) {
+            // Log error for audit trail
+            $this->logCustomAction(
+                'settings_update_failed',                null,
+                "Failed to update email settings - Error: {$e->getMessage()}"
+            );
+            
+            return redirect()->route('admin.settings.index', ['tab' => 'email'])
+                ->with('error', 'Error updating email settings: ' . $e->getMessage());
+        }
     }
       // The updateEnvFile function has been moved to app/Helpers/functions.php
 }

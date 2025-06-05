@@ -15,6 +15,8 @@ use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\WishlistController;
 use App\Http\Controllers\GuestCartController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\GeminiController;
+
 
 
 /*
@@ -30,6 +32,8 @@ use App\Http\Controllers\ChatController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [PageController::class, 'about'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::get('/terms-of-service', [PageController::class, 'termsOfService'])->name('terms-of-service');
+Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('privacy-policy');
 Route::post('/contact/submit', [ContactController::class, 'submit'])->name('contact.submit');
 
 // Debug and diagnostic routes
@@ -79,18 +83,20 @@ Route::post('/product/{id}/review', [ProductController::class, 'submitReview'])-
 // Cart Routes
 Route::middleware(['auth'])->group(function() {
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
-    Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
     Route::match(['post', 'patch'], '/cart/update', [CartController::class, 'update'])->name('cart.update');
     Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
     Route::post('/cart/clear', [CartController::class, 'clearCart'])->name('cart.clear');
-    Route::post('/cart/apply-promo', [CartController::class, 'applyPromoCode'])->name('cart.apply-promo');
-    Route::post('/cart/remove-promo', [CartController::class, 'removePromoCode'])->name('cart.remove-promo');
+    Route::post('/cart/apply-promo', [CartController::class, 'applyCoupon'])->name('cart.apply-promo');
+    Route::delete('/cart/remove-coupon', [CartController::class, 'removeCoupon'])->name('cart.remove-coupon');
     
     // Checkout Routes
     Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
     Route::post('/checkout/process', [CartController::class, 'processCheckout'])->name('checkout.process');
     Route::get('/order/confirmation/{order}', [CartController::class, 'orderConfirmation'])->name('order.confirmation');
 });
+
+// Cart Add Route - uses special middleware to redirect to login if not authenticated
+Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add')->middleware('cart.auth');
 
 // Guest Cart Routes
 Route::middleware(['web'])->group(function() {
@@ -210,6 +216,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Dashboard route
         Route::get('dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
         
+        // Notifications
+        Route::post('notifications/dismiss', [App\Http\Controllers\Admin\NotificationController::class, 'dismiss'])->name('notifications.dismiss');
+        Route::post('notifications/dismiss-all', [App\Http\Controllers\Admin\NotificationController::class, 'dismissAll'])->name('notifications.dismiss-all');
+        
         // Profile
         Route::get('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'show'])->name('profile');
         Route::put('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
@@ -224,6 +234,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Orders
         Route::resource('orders', App\Http\Controllers\Admin\OrderController::class);
         Route::get('orders/filter/pending', [App\Http\Controllers\Admin\OrderController::class, 'pending'])->name('orders.pending');
+        Route::get('orders/{order}/invoice', [App\Http\Controllers\Admin\OrderController::class, 'invoice'])->name('orders.invoice');
         Route::get('orders/test-route', function() {
             return "Available routes: " . route('orders.pending') . " and " . route('orders.index');
         });
@@ -250,13 +261,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
         
         // Promotions
         Route::prefix('promotions')->name('promotions.')->group(function () {
-            Route::get('/discounts', [App\Http\Controllers\Admin\PromotionController::class, 'discounts'])->name('discounts');
-            Route::get('/promo-codes', [App\Http\Controllers\Admin\PromotionController::class, 'promoCodes'])->name('promo-codes');
+            Route::get('/', [App\Http\Controllers\Admin\PromotionController::class, 'index'])->name('index');
+            Route::get('/export', [App\Http\Controllers\Admin\PromotionController::class, 'export'])->name('export');
+            Route::get('/create', [App\Http\Controllers\Admin\PromotionController::class, 'createPromoCode'])->name('promo_codes.create');
+            Route::post('/', [App\Http\Controllers\Admin\PromotionController::class, 'storePromoCode'])->name('promo_codes.store');
+            Route::get('/{id}', [App\Http\Controllers\Admin\PromotionController::class, 'showPromoCode'])->name('promo_codes.show');
+            Route::get('/{id}/edit', [App\Http\Controllers\Admin\PromotionController::class, 'editPromoCode'])->name('promo_codes.edit');
+            Route::put('/{id}', [App\Http\Controllers\Admin\PromotionController::class, 'updatePromoCode'])->name('promo_codes.update');
+            Route::delete('/{id}', [App\Http\Controllers\Admin\PromotionController::class, 'destroyPromoCode'])->name('promo_codes.destroy');
+            Route::patch('/{id}/toggle', [App\Http\Controllers\Admin\PromotionController::class, 'togglePromoCode'])->name('promo_codes.toggle');
         });
         
         // Reviews & Ratings
         Route::resource('reviews', App\Http\Controllers\Admin\ReviewController::class)->except(['create', 'store', 'edit', 'update']);
         Route::patch('reviews/{review}/status', [App\Http\Controllers\Admin\ReviewController::class, 'updateStatus'])->name('reviews.update-status');
+        Route::patch('reviews/{review}/approve', [App\Http\Controllers\Admin\ReviewController::class, 'approve'])->name('reviews.approve');
+        Route::patch('reviews/{review}/reject', [App\Http\Controllers\Admin\ReviewController::class, 'reject'])->name('reviews.reject');
         
         // Support Tickets
         Route::resource('support-tickets', App\Http\Controllers\Admin\SupportTicketController::class)->except(['create', 'store', 'edit', 'update', 'destroy']);
@@ -276,9 +296,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 // Chat routes
-Route::get('/chat', [ChatController::class, 'index'])->name('chat');
-Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
-Route::post('/chat/clear', [ChatController::class, 'clearConversation'])->name('chat.clear');
+Route::get('/chat', [GeminiController::class, 'index'])->name('chat');
+Route::post('/chat/send', [GeminiController::class, 'sendMessage'])->name('chat.send');
+Route::post('/chat/clear', [GeminiController::class, 'clearConversation'])->name('chat.clear');
+
+// Test route for Gemini chat
+Route::get('/test-chat', function () {
+    try {
+        $result = \Gemini\Laravel\Facades\Gemini::generativeModel(model: 'gemini-1.5-flash-latest')
+                    ->generateContent('Hello! This is a test message for PangAIaShop chatbot.');
+        
+        return response()->json([
+            'success' => true,
+            'message' => $result->text(),
+            'status' => 'Gemini API is working correctly!'
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'status' => 'Gemini API error'
+        ]);
+    }
+});
 
 // Test route for settings helper
 Route::get('/test-setting', function () {
@@ -290,3 +330,76 @@ Route::get('/test-setting', function () {
     
     return "Setting value: " . $value;
 });
+
+// Temporary test route to debug admin reviews page
+Route::get('/test-admin-reviews', function() {
+    // Test the same logic as the admin controller
+    $searchQuery = request()->input('search');
+    $statusFilter = request()->input('status');
+    
+    $reviews = App\Models\Review::with(['product', 'user'])
+        ->when($searchQuery, function ($query, $search) {
+            return $query->where('comment', 'like', "%{$search}%")
+                ->orWhereHas('product', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+        })
+        ->when($statusFilter, function ($query, $status) {
+            if (in_array($status, ['pending', 'approved', 'rejected'])) {
+                return $query->where('moderation_status', $status);
+            }
+            return $query;
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(15);
+    
+    // Get pending reviews count for badge display
+    $pendingReviewsCount = App\Models\Review::where('moderation_status', 'pending')->count();
+        
+    return view('admin.reviews.index-test', compact('reviews', 'searchQuery', 'statusFilter', 'pendingReviewsCount'));
+});
+
+// Test route for Gemini API debugging
+Route::get('/test-gemini-debug', function() {
+    try {
+        echo "<h1>Gemini API Debug Test</h1>";
+        
+        // Check if API key is configured
+        $apiKey = config('gemini.api_key');
+        echo "<p><strong>API Key:</strong> " . (empty($apiKey) ? 'NOT CONFIGURED' : substr($apiKey, 0, 10) . '...') . "</p>";
+        
+        if (empty($apiKey)) {
+            echo "<p style='color: red;'>❌ API key is not configured!</p>";
+            return;
+        }
+        
+        echo "<p>✅ API key is configured</p>";
+        
+        // Test API call
+        echo "<h2>Testing API Call...</h2>";
+        
+        $result = \Gemini\Laravel\Facades\Gemini::generativeModel(model: 'gemini-1.5-flash-latest')
+                                               ->generateContent('Hello! Please respond with just "API working correctly" to confirm the connection.');
+        
+        $response = $result->text();
+        
+        echo "<p><strong>Response:</strong> " . htmlspecialchars($response) . "</p>";
+        echo "<p style='color: green;'>✅ Gemini API is working correctly!</p>";
+        
+    } catch (\Exception $e) {
+        echo "<p style='color: red;'>❌ Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p><strong>Error Class:</strong> " . get_class($e) . "</p>";
+        echo "<p><strong>File:</strong> " . $e->getFile() . ":" . $e->getLine() . "</p>";
+        echo "<pre><strong>Stack Trace:</strong>\n" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+    }
+});
+
+// Gemini AI Routes
+Route::post('/ask-gemini', [GeminiController::class, 'generateText']);
+// Or for GET requests with a query parameter:
+Route::get('/ask-gemini', [GeminiController::class, 'generateText']);
+Route::post('/chat.send', [GeminiController::class, 'sendMessage'])->name('chat.send');

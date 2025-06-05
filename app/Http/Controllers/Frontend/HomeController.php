@@ -43,10 +43,9 @@ class HomeController extends Controller
                                        // Get category name
                                        $product->category_name = $product->categories->first() 
                                            ? $product->categories->first()->name 
-                                           : 'Uncategorized';
-                                         
-                                       // Check stock status with enhanced handling
-                                       $productInventory = $product->inventory->first();
+                                           : 'Uncategorized';                                         
+                                       // Check stock status using hasOne relationship
+                                       $productInventory = $product->inventory;
                                         
                                        // Add enhanced debug logging
                                        \Log::debug('Featured product inventory check', [
@@ -83,16 +82,15 @@ class HomeController extends Controller
                                       ? $product->categories->first()->name 
                                       : 'Uncategorized';
                                       
-                                  // Check stock status - inventory is a collection, so we need to use first()
-                                  $productInventory = $product->inventory->first();
+                                  // Check stock status using hasOne relationship
+                                  $productInventory = $product->inventory;
                                   // Explicitly cast quantity to int for comparison
                                   $quantity = $productInventory ? (int)$productInventory->quantity : 0;
                                   $product->in_stock = $quantity > 0;
                                   $product->stock_qty = $quantity;
                                   
                                   return $product;
-                              });
-          // Get best selling products
+                              });          // Get best selling products
         $bestSellers = Product::where('status', 'active')
                               ->withCount('orderItems')
                               ->orderBy('order_items_count', 'desc')
@@ -110,8 +108,8 @@ class HomeController extends Controller
                                       ? $product->categories->first()->name 
                                       : 'Uncategorized';
                                       
-                                  // Check stock status - inventory is a collection, so we need to use first()
-                                  $productInventory = $product->inventory->first();
+                                  // Check stock status using hasOne relationship
+                                  $productInventory = $product->inventory;
                                   // Explicitly cast quantity to int for comparison
                                   $quantity = $productInventory ? (int)$productInventory->quantity : 0;
                                   $product->in_stock = $quantity > 0;

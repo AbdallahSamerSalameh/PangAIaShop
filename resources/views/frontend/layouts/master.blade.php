@@ -7,9 +7,10 @@
 	<meta name="csrf-token" content="{{ csrf_token() }}">
 
 	<!-- title -->
-	<title>@yield('title', 'PangAIaShop')</title>
-	<!-- favicon -->
+	<title>@yield('title', 'PangAIaShop')</title>	<!-- favicon -->
+	<link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 	<link rel="shortcut icon" type="image/png" href="{{ asset('assets/img/favicon.png') }}">
+	<link rel="apple-touch-icon" href="{{ asset('assets/img/favicon.png') }}">
 	<!-- google font -->
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css?family=Poppins:400,700&display=swap" rel="stylesheet">
@@ -37,9 +38,27 @@
 	<!-- wishlist common styles -->
 	<link rel="stylesheet" href="{{ asset('assets/css/wishlist-common.css') }}">
 	<!-- cart indicators -->
-	<link rel="stylesheet" href="{{ asset('assets/css/cart-indicators.css') }}">
-	
+	<link rel="stylesheet" href="{{ asset('assets/css/cart-indicators.css') }}">	
 	@yield('styles')
+		<style>
+		.footer-box .widget-title {
+			position: relative;
+			padding-bottom: 10px;
+			margin-bottom: 20px;
+		}
+		
+		.footer-box .widget-title::after {
+			content: '';
+			position: absolute;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 60px;
+			height: 3px;
+			background-color: #F28123;
+			border-radius: 2px;
+		}
+	</style>
 </head>
 <body>
 	
@@ -121,7 +140,7 @@
 									@endif
 								</a>
 								@if(Auth::check())
-									<div class="user-dropdown">
+									<div class="user-dropdown text-center">
 										<a class="mobile-hide user-icon" href="{{ route('profile') }}">
 											<i class="fas fa-user text-white"></i>
 											<span class="ml-1 text-white">{{ Auth::user()->username }}</span>
@@ -132,7 +151,7 @@
 											<a href="{{ route('wishlist') }}">Wishlist</a>
 											<form action="{{ route('logout') }}" method="POST">
 												@csrf
-												<button type="submit" class="dropdown-logout">Logout</button>
+												<button type="submit" class="dropdown-logout text-center">Logout</button>
 											</form>
 										</div>
 									</div>
@@ -185,23 +204,22 @@
 	<div class="footer-area">
 		<div class="container">
 			<div class="row">
-				<div class="col-lg-3 col-md-6">
+				<div class="col-lg-4 col-md-6 text-center">
 					<div class="footer-box about-widget">
 						<h2 class="widget-title">About us</h2>
 						<p>PangAIaShop offers the best products with unbeatable prices and exceptional quality. Your go-to destination for all your shopping needs.</p>
 					</div>
 				</div>
-				<div class="col-lg-3 col-md-6">
+				<div class="col-lg-4 col-md-6 text-center">
 					<div class="footer-box get-in-touch">
 						<h2 class="widget-title">Get in Touch</h2>
 						<ul>
-							<li>123 Main Street, City, Country</li>
+							<li>123 Main Street, Amman, Jordan</li>
 							<li>support@pangaiashop.com</li>
 							<li>+123 456 7890</li>
 						</ul>
 					</div>
-				</div>
-				<div class="col-lg-3 col-md-6">
+				</div>				<div class="col-lg-4 col-md-6 text-center justify-content-center">
 					<div class="footer-box pages">
 						<h2 class="widget-title">Pages</h2>
 						<ul>
@@ -209,10 +227,12 @@
 							<li><a href="{{ route('about') }}">About</a></li>
 							<li><a href="{{ route('shop') }}">Shop</a></li>
 							<li><a href="{{ route('contact') }}">Contact</a></li>
+							<li><a href="{{ route('terms-of-service') }}">Terms of Service</a></li>
+							<li><a href="{{ route('privacy-policy') }}">Privacy Policy</a></li>
 						</ul>
 					</div>
 				</div>
-				<div class="col-lg-3 col-md-6">
+				{{-- <div class="col-lg-3 col-md-6">
 					<div class="footer-box subscribe">
 						<h2 class="widget-title">Subscribe</h2>
 						<p>Subscribe to our mailing list to get the latest updates.</p>
@@ -222,18 +242,18 @@
 							<button type="submit"><i class="fas fa-paper-plane"></i></button>
 						</form>
 					</div>
-				</div>
+				</div> --}}
 			</div>
 		</div>
 	</div>
 	<!-- end footer -->
-	
-	<!-- copyright -->
+		<!-- copyright -->
 	<div class="copyright">
 		<div class="container">
 			<div class="row">
 				<div class="col-lg-6 col-md-12">
-					<p>Copyrights &copy; {{ date('Y') }} - <a href="{{ route('home') }}">PangAIaShop</a>, All Rights Reserved.</p>
+					<p>Copyrights &copy; {{ date('Y') }} - <a href="{{ route('home') }}">PangAIaShop</a>, All Rights Reserved.<br>
+					<small><a href="{{ route('terms-of-service') }}">Terms of Service</a> | <a href="{{ route('privacy-policy') }}">Privacy Policy</a></small></p>
 				</div>
 				<div class="col-lg-6 text-right col-md-12">
 					<div class="social-icons">
@@ -384,12 +404,12 @@
 }
 </style>
 
-<!-- Chat Widget -->
+{{-- <!-- Chat Widget -->
 <div class="chat-widget">
     <button class="chat-toggle-btn" id="chatToggleBtn" title="Chat with AI">
         <i class="fas fa-comments"></i>
     </button>
-</div>
+</div> --}}
 
 <!-- Chat Modal -->
 <div class="chat-modal" id="chatModal">
